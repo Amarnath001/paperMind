@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 
-import { apiFetch, clearToken } from "@/src/lib/api";
+import { apiFetch, clearToken, fetchJobs, Job } from "@/src/lib/api";
 
 interface Workspace {
   id: string;
@@ -27,6 +27,7 @@ export default function WorkspacePage() {
 
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [papers, setPapers] = useState<Paper[]>([]);
+  const [jobsByPaper, setJobsByPaper] = useState<Record<string, Job[]>>({});
   const [error, setError] = useState<string | null>(null);
 
   async function load() {
@@ -38,6 +39,28 @@ export default function WorkspacePage() {
       ]);
       setWorkspace(ws);
       setPapers(ps);
+
+      // Load jobs for any papers that are still processing
+      const processingPaperIds = ps
+        .filter((p) => p.status === "processing")
+        .map((p) => p.id);
+
+      if (processingPaperIds.length > 0) {
+        const allJobs: Record<string, Job[]> = {};
+        await Promise.all(
+          processingPaperIds.map(async (paperId) => {
+            try {
+              const jobs = await fetchJobs({ paperId, workspaceId });
+              allJobs[paperId] = jobs;
+            } catch {
+              // Ignore job fetch errors on this pass
+            }
+          }),
+        );
+        setJobsByPaper(allJobs);
+      } else {
+        setJobsByPaper({});
+      }
     } catch (err: any) {
       if (err.message?.toLowerCase().includes("unauthorized")) {
         clearToken();
@@ -80,8 +103,18 @@ export default function WorkspacePage() {
                 <div>
                   <strong>{p.title}</strong>
                   <div className="paper-meta">
-                    {p.filename} · {p.status} ·{" "}
-                    {new Date(p.created_at).toLocaleString()}
+                    {p.filename} ·{" "}
+                    <span className={`status-badge status-${p.status}`}>
+                      {p.status}
+                      {p.status === "processing" &&
+                        (() => {
+                          const jobs = jobsByPaper[p.id] || [];
+                          const job = jobs[0];
+                          if (!job) return null;
+                          return ` · ${job.progress}%`;
+                        })()}
+                    </span>{" "}
+                    · {new Date(p.created_at).toLocaleString()}
                   </div>
                 </div>
               </li>

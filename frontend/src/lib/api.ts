@@ -60,3 +60,30 @@ export async function apiFetch<T = any>(
 
 export { API_BASE_URL };
 
+// Jobs API helpers
+
+export interface Job {
+  id: string;
+  workspace_id: string;
+  paper_id: string | null;
+  type: string;
+  status: string;
+  progress: number;
+  error: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export function fetchJobs(params: {
+  workspaceId?: string;
+  paperId?: string;
+}): Promise<Job[]> {
+  const search = new URLSearchParams();
+  if (params.workspaceId) search.set("workspace_id", params.workspaceId);
+  if (params.paperId) search.set("paper_id", params.paperId);
+  const qs = search.toString();
+  const path = qs ? `/jobs?${qs}` : "/jobs";
+  return apiFetch<Job[]>(path);
+}
+
+

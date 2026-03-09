@@ -56,7 +56,7 @@ export default function UploadPage() {
         );
       }
 
-      setSuccess("Upload successful");
+      setSuccess("Upload successful. Ingestion has been queued.");
       setTitle("");
       setFile(null);
       if (fileInputRef.current) {

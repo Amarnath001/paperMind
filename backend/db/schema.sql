@@ -42,10 +42,44 @@ CREATE TABLE IF NOT EXISTS papers (
     title TEXT NOT NULL,
     filename TEXT NOT NULL,
     file_path TEXT NOT NULL,
-    status TEXT NOT NULL CHECK (status IN ('uploaded','processing','ready')),
+    status TEXT NOT NULL CHECK (status IN ('uploaded','processing','ready','failed')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_papers_workspace_id
     ON papers (workspace_id);
+
+
+-- Jobs
+CREATE TABLE IF NOT EXISTS jobs (
+    id UUID PRIMARY KEY,
+    workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    paper_id UUID REFERENCES papers(id) ON DELETE CASCADE,
+    type TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (status IN ('queued','running','completed','failed')),
+    progress INTEGER NOT NULL DEFAULT 0,
+    error TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_jobs_workspace_id
+    ON jobs (workspace_id);
+
+CREATE INDEX IF NOT EXISTS idx_jobs_paper_id
+    ON jobs (paper_id);
+
+
+-- Chunks
+CREATE TABLE IF NOT EXISTS chunks (
+    id UUID PRIMARY KEY,
+    paper_id UUID NOT NULL REFERENCES papers(id) ON DELETE CASCADE,
+    chunk_index INTEGER NOT NULL,
+    text TEXT NOT NULL,
+    token_count INTEGER,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_chunks_paper_id
+    ON chunks (paper_id);
 

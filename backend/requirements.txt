@@ -6,3 +6,4 @@ celery==5.3.6
 python-dotenv==1.0.1
 bcrypt==5.0.0
 PyJWT==2.11.0
+pypdf==6.7.5

@@ -8,6 +8,8 @@ from flask import Blueprint, current_app, jsonify, request
 from app.db import get_db
 from app.services.auth_service import require_auth
 from app.services.storage_service import ALLOWED_EXTENSIONS, allowed_file, save_paper_file
+from app.services.job_service import create_job
+from app.tasks.ingestion_tasks import ingest_paper_task
 
 papers_bp = Blueprint("papers", __name__)
 
@@ -103,7 +105,23 @@ def upload_paper():
         "status": row[5],
         "created_at": row[6].isoformat(),
     }
-    return jsonify(paper), 201
+
+    # Create ingestion job and dispatch Celery task asynchronously
+    job = create_job(
+        workspace_id=ws_uuid,
+        paper_id=paper_id,
+        job_type="ingestion",
+        status="queued",
+        progress=0,
+    )
+    ingest_paper_task.delay(
+        str(job["id"]),
+        str(paper_id),
+        str(ws_uuid),
+        paper["file_path"],
+    )
+
+    return jsonify({"paper": paper, "job": {**job, "id": str(job["id"])}}), 201
 
 
 @papers_bp.route("", methods=["GET"])
@@ -151,4 +169,52 @@ def list_papers():
                 )
 
     return jsonify(items)
+
+
+@papers_bp.route("/<paper_id>", methods=["GET"])
+def get_paper(paper_id: str):
+    try:
+        user = require_auth()
+    except Exception as exc:  # noqa: BLE001
+        return jsonify({"error": str(exc)}), 401
+
+    try:
+        paper_uuid = UUID(paper_id)
+    except ValueError:
+        return jsonify({"error": "invalid paper id"}), 400
+
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT p.id,
+                       p.workspace_id,
+                       p.title,
+                       p.filename,
+                       p.file_path,
+                       p.status,
+                       p.created_at
+                FROM papers p
+                JOIN workspace_members m
+                  ON p.workspace_id = m.workspace_id
+                WHERE p.id = %s
+                  AND m.user_id = %s
+                """,
+                (str(paper_uuid), str(user["id"])),
+            )
+            row = cur.fetchone()
+
+    if not row:
+        return jsonify({"error": "paper not found"}), 404
+
+    paper = {
+        "id": row[0],
+        "workspace_id": row[1],
+        "title": row[2],
+        "filename": row[3],
+        "file_path": row[4],
+        "status": row[5],
+        "created_at": row[6].isoformat(),
+    }
+    return jsonify(paper)
 

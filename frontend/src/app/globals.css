@@ -216,6 +216,35 @@ body {
   color: #6b7280;
 }
 
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  text-transform: lowercase;
+}
+
+.status-uploaded {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.status-processing {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-ready {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status-failed {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
 .upload-form {
   display: flex;
   flex-direction: column;
