@@ -1,33 +1,21 @@
 export default function Home() {
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "2rem",
-        textAlign: "center",
-      }}
-    >
-      <h1
-        style={{
-          fontSize: "2.5rem",
-          fontWeight: 700,
-          marginBottom: "0.5rem",
-        }}
-      >
-        PaperMind – Research Intelligence Platform
-      </h1>
-      <p
-        style={{
-          color: "#666",
-          fontSize: "1.125rem",
-        }}
-      >
-        Multi-Agent AI for research paper ingestion, embeddings, clustering, and RAG
-      </p>
+    <main className="auth-layout">
+      <section className="auth-card">
+        <h1>PaperMind – Research Intelligence Platform</h1>
+        <p style={{ marginBottom: "1.25rem", color: "#4b5563" }}>
+          Multi-Agent AI for research paper ingestion, embeddings, clustering,
+          and RAG.
+        </p>
+        <div style={{ display: "flex", gap: "0.75rem" }}>
+          <a href="/signup" className="auth-primary-link">
+            Get started
+          </a>
+          <a href="/login" className="auth-secondary-link">
+            Log in
+          </a>
+        </div>
+      </section>
     </main>
   );
 }

@@ -1,10 +1,13 @@
 """Application configuration."""
 
 import os
+from pathlib import Path
 
 from dotenv import load_dotenv
 
 load_dotenv()
+
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 class Config:
@@ -12,6 +15,15 @@ class Config:
 
     # Flask
     SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret-key-change-in-production")
+
+    # JWT
+    JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", SECRET_KEY)
+    JWT_ALGORITHM = "HS256"
+    ACCESS_TOKEN_EXPIRES_MINUTES = int(os.environ.get("ACCESS_TOKEN_EXPIRES_MINUTES", "60"))
+
+    # File uploads
+    UPLOAD_FOLDER = os.environ.get("UPLOAD_FOLDER", str(BASE_DIR / "uploads"))
+    MAX_CONTENT_LENGTH = 20 * 1024 * 1024  # 20MB
 
     # Database
     DATABASE_URL = os.environ.get(

@@ -90,6 +90,43 @@ Ensure PostgreSQL and Redis are running (e.g. via `docker compose up postgres re
 - `GET /healthz` – Returns `{"status": "ok"}` (liveness)
 - `GET /readyz` – Returns readiness status; checks PostgreSQL and Redis. Returns 503 if either is unreachable.
 
+## Milestone 1 – Core Application
+
+This milestone introduces the core application layer:
+
+- **Authentication** – Email/password signup & login with bcrypt-hashed passwords and JWT-based auth (`/auth/signup`, `/auth/login`, `/auth/me`).
+- **Workspaces** – Multi-tenant workspaces with membership and roles; endpoints to create and list workspaces and fetch a workspace (`/workspaces`, `/workspaces/:id`).
+- **Paper upload** – Authenticated PDF uploads (max 20MB) into workspaces via `/papers/upload`, saving files under the backend `uploads/` directory and recording metadata in PostgreSQL.
+- **Library listing** – Workspace-specific library listing via `/papers?workspace_id=...`, returning all papers for a workspace.
+
+> Note: Database tables (`users`, `workspaces`, `workspace_members`, `papers`) must exist in PostgreSQL; migrations/DDL can be managed with your preferred tooling.
+
+## Database Initialization
+
+When you run:
+
+```bash
+docker compose up --build
+```
+
+the PostgreSQL container automatically runs the schema defined in:
+
+- `backend/db/schema.sql`
+
+This uses Postgres' standard entrypoint mechanism by mounting the file into `/docker-entrypoint-initdb.d/schema.sql`. The script is only executed on **first initialization** of the `postgres_data` volume; subsequent `docker compose up` runs will not re-apply the schema.
+
+If you want to reset the database state and re-run schema initialization (for example during early development), you can remove the volume:
+
+```bash
+docker compose down -v
+```
+
+Then start the stack again:
+
+```bash
+docker compose up --build
+```
+
 ## License
 
 Private
