@@ -36,3 +36,7 @@ class Config:
 
     # OpenAI (for future use)
     OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
+
+    # Embeddings
+    EMBEDDING_MODEL = os.environ.get("EMBEDDING_MODEL", "BAAI/bge-small-en-v1.5")
+    EMBEDDING_DIMENSION = int(os.environ.get("EMBEDDING_DIMENSION", "384"))

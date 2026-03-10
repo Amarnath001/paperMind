@@ -110,6 +110,15 @@ Milestone 2 adds an asynchronous ingestion pipeline and job tracking:
 - **Job-triggered ingestion** – After a successful PDF upload, an `ingestion` job is created and a Celery task processes the paper in the background (updating paper status from `uploaded` → `processing` → `ready` or `failed`).
 - **APIs** – New `/jobs` and `/jobs/:id` endpoints expose job metadata, and paper APIs expose processing status for frontend visibility.
 
+## Milestone 3 – Local Embeddings & Semantic Search
+
+Milestone 3 adds native embedding generation and vector search powered by Postgres `pgvector` and Sentence Transformers. Fast, private, zero external AI costs.
+
+- **Vector Storage** – Adds `.embedding vector(384)` columns with `ivfflat` indexes for both `papers` and `chunks` tables.
+- **Local Embedding Pipeline** – Uses local, open-source models (default: `BAAI/bge-small-en-v1.5`) via `sentence-transformers`, removing the need for paid external APIs.
+- **Chained Jobs** – The ingestion pipeline automatically queues an `embedding` job after chunking, chaining the workflow smoothly: `upload -> ingestion -> chunking -> embedding -> semantic search`.
+- **Search APIs** – Exposes two new semantic vector-search endpoints: `/search` (find chunks matching a text query in a workspace) and `/papers/<id>/similar` (find related papers using their cached centroid vector).
+
 For **new databases**, the schema is created via `backend/db/schema.sql` on first container startup.
 
 For **existing local databases**, you can either:
@@ -127,6 +136,7 @@ For **existing local databases**, you can either:
   # From the project root, with Postgres running
   docker compose exec postgres psql -U postgres -d papermind -f /docker-entrypoint-initdb.d/schema.sql
   docker compose exec postgres psql -U postgres -d papermind -f /path/to/backend/db/migrations/002_milestone2.sql
+  docker compose exec postgres psql -U postgres -d papermind -f /path/to/backend/db/migrations/003_milestone3.sql
   ```
 
 ### Running the Celery worker

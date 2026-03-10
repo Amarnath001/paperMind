@@ -3,7 +3,14 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 
-import { apiFetch, clearToken, fetchJobs, Job } from "@/src/lib/api";
+import {
+  apiFetch,
+  clearToken,
+  fetchJobs,
+  Job,
+  searchChunks,
+  SearchResult,
+} from "@/src/lib/api";
 
 interface Workspace {
   id: string;
@@ -29,6 +36,10 @@ export default function WorkspacePage() {
   const [papers, setPapers] = useState<Paper[]>([]);
   const [jobsByPaper, setJobsByPaper] = useState<Record<string, Job[]>>({});
   const [error, setError] = useState<string | null>(null);
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchResults, setSearchResults] = useState<SearchResult[] | null>(null);
 
   async function load() {
     setError(null);
@@ -77,6 +88,28 @@ export default function WorkspacePage() {
     }
   }, [workspaceId]);
 
+  async function handleSearch(e: React.FormEvent) {
+    e.preventDefault();
+    if (!searchQuery.trim()) {
+      setSearchResults(null);
+      return;
+    }
+
+    setIsSearching(true);
+    setError(null);
+    try {
+      const res = await searchChunks({
+        workspace_id: workspaceId,
+        query: searchQuery,
+      });
+      setSearchResults(res.results);
+    } catch (err: any) {
+      setError(err.message || "Failed to search");
+    } finally {
+      setIsSearching(false);
+    }
+  }
+
   return (
     <main className="page-layout">
       <header className="page-header">
@@ -93,8 +126,52 @@ export default function WorkspacePage() {
       {error && <p className="auth-error">{error}</p>}
 
       <section className="card">
-        <h2>Papers</h2>
-        {papers.length === 0 ? (
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+          <h2>{searchResults ? "Search Results" : "Papers"}</h2>
+          <form onSubmit={handleSearch} style={{ display: "flex", gap: "0.5rem" }}>
+            <input
+              type="text"
+              placeholder="Ask a question..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              disabled={isSearching}
+            />
+            <button type="submit" disabled={isSearching || !searchQuery.trim()}>
+              {isSearching ? "Searching..." : "Search"}
+            </button>
+            {searchResults && (
+              <button
+                type="button"
+                onClick={() => { setSearchResults(null); setSearchQuery(""); }}
+                style={{ background: "#4B5563" }}
+              >
+                Clear
+              </button>
+            )}
+          </form>
+        </div>
+
+        {searchResults ? (
+          searchResults.length === 0 ? (
+            <p>No relevant excerpts found.</p>
+          ) : (
+            <ul className="paper-list">
+              {searchResults.map((res) => (
+                <li key={res.chunk_id}>
+                  <div>
+                    <strong>{res.paper_title}</strong>
+                    <div className="paper-meta" style={{ marginBottom: "0.5rem" }}>
+                      Chunk {res.chunk_index} · Similarity: {(res.similarity * 100).toFixed(1)}%
+                    </div>
+                    <p style={{ margin: 0, fontSize: "0.9rem", color: "#4B5563" }}>
+                      {res.text.length > 300 ? res.text.slice(0, 300) + "..." : res.text}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )
+        ) : papers.length === 0 ? (
           <p>No papers uploaded yet.</p>
         ) : (
           <ul className="paper-list">

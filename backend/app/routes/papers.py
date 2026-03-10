@@ -9,6 +9,7 @@ from app.db import get_db
 from app.services.auth_service import require_auth
 from app.services.storage_service import ALLOWED_EXTENSIONS, allowed_file, save_paper_file
 from app.services.job_service import create_job
+from app.services.vector_service import search_similar_papers
 from app.tasks.ingestion_tasks import ingest_paper_task
 
 papers_bp = Blueprint("papers", __name__)
@@ -217,4 +218,60 @@ def get_paper(paper_id: str):
         "created_at": row[6].isoformat(),
     }
     return jsonify(paper)
+
+
+@papers_bp.route("/<paper_id>/similar", methods=["GET"])
+def get_similar_papers(paper_id: str):
+    """Find papers similar to the specified paper within the same workspace."""
+    try:
+        user = require_auth()
+    except Exception as exc:  # noqa: BLE001
+        return jsonify({"error": str(exc)}), 401
+
+    try:
+        paper_uuid = UUID(paper_id)
+    except ValueError:
+        return jsonify({"error": "invalid paper id"}), 400
+
+    limit_val = request.args.get("limit", 5)
+    try:
+        limit = int(limit_val)
+        if limit < 1 or limit > 50:
+            limit = 5
+    except ValueError:
+        limit = 5
+
+    # 1. Ensure user has access to the paper's workspace
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT p.workspace_id
+                FROM papers p
+                JOIN workspace_members m ON p.workspace_id = m.workspace_id
+                WHERE p.id = %s AND m.user_id = %s
+                """,
+                (str(paper_uuid), str(user["id"])),
+            )
+            row = cur.fetchone()
+
+    if not row:
+        return jsonify({"error": "paper not found or access denied"}), 404
+
+    workspace_uuid = row[0]
+
+    try:
+        # 2. Search using the paper's already-stored embedding
+        results = search_similar_papers(
+            workspace_id=workspace_uuid,
+            paper_id=paper_uuid,
+            limit=limit,
+        )
+        return jsonify({"results": results}), 200
+
+    except ValueError as exc:
+        # E.g., paper has no embedding yet because it's still processing
+        return jsonify({"error": str(exc)}), 400
+    except Exception as exc:
+        return jsonify({"error": f"Search failed: {str(exc)}"}), 500
 

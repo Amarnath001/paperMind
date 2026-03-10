@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from uuid import UUID
 
@@ -14,4 +14,5 @@ class Paper:
     file_path: str
     status: str
     created_at: datetime
+    embedding: list[float] | None = field(default=None, repr=False)
 
