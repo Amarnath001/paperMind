@@ -3,8 +3,10 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
+from app.config import Config
 from app.services.embedding_service import generate_embedding
 from app.services.vector_service import search_similar_chunks
+from app.services.reranking_service import rerank_chunks
 
 
 def retrieve_context_for_question(
@@ -28,11 +30,27 @@ def retrieve_context_for_question(
     # 1) Embed the question using the local Sentence Transformers model
     query_embedding = generate_embedding(question)
 
-    # 2) Search similar chunks in the workspace
-    results = search_similar_chunks(workspace_id=workspace_id, query_embedding=query_embedding, limit=limit)
+    # 2) Initial retrieval using pgvector with a broader candidate set
+    initial_limit = max(limit, Config.INITIAL_RETRIEVAL_LIMIT)
+    candidates = search_similar_chunks(
+        workspace_id=workspace_id,
+        query_embedding=query_embedding,
+        limit=initial_limit,
+    )
 
     if paper_id is not None:
-        results = [r for r in results if str(r["paper_id"]) == str(paper_id)]
+        candidates = [r for r in candidates if str(r["paper_id"]) == str(paper_id)]
 
-    return results[:limit]
+    final_limit = min(limit, Config.FINAL_CONTEXT_LIMIT)
+
+    if not candidates:
+        return []
+
+    # 3) Optional local reranking
+    if Config.ENABLE_RERANKING:
+        reranked = rerank_chunks(question, candidates, top_k=final_limit)
+        return reranked
+
+    # Fallback: use the initial candidates (respect final_limit)
+    return candidates[:final_limit]
 

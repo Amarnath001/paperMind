@@ -45,3 +45,15 @@ class Config:
     LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "gemini")
     GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
     GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-1.5-flash")
+
+    # Retrieval / reranking
+    RERANKER_MODEL = os.environ.get(
+        "RERANKER_MODEL", "cross-encoder/ms-marco-MiniLM-L-6-v2"
+    )
+    ENABLE_RERANKING = os.environ.get("ENABLE_RERANKING", "true").lower() in {
+        "1",
+        "true",
+        "yes",
+    }
+    INITIAL_RETRIEVAL_LIMIT = int(os.environ.get("INITIAL_RETRIEVAL_LIMIT", "20"))
+    FINAL_CONTEXT_LIMIT = int(os.environ.get("FINAL_CONTEXT_LIMIT", "5"))

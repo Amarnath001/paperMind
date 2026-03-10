@@ -151,6 +151,24 @@ The full pipeline is now:
 
 `upload → ingestion → chunking → embedding → retrieval → Gemini answer (with citations)`.
 
+### Retrieval Quality Optimisation: Local Reranking
+
+To improve answer quality without adding any external API costs, PaperMind performs **local cross-encoder reranking** on top of pgvector search:
+
+- **Two-stage retrieval**:
+  1. **Initial retrieval**: pgvector semantic search over `chunks.embedding` fetches a broader candidate set (default `INITIAL_RETRIEVAL_LIMIT = 20`).
+  2. **Local reranking**: a Sentence Transformers cross-encoder (`cross-encoder/ms-marco-MiniLM-L-6-v2`) scores each *(question, chunk)* pair and selects the best `FINAL_CONTEXT_LIMIT` chunks (default `5`).
+- **Implementation**:
+  - Config values in `Config`:
+    - `RERANKER_MODEL` (default `"cross-encoder/ms-marco-MiniLM-L-6-v2"`).
+    - `ENABLE_RERANKING` (default `true`).
+    - `INITIAL_RETRIEVAL_LIMIT` (default `20`).
+    - `FINAL_CONTEXT_LIMIT` (default `5`).
+  - Reranking is implemented in `backend/app/services/reranking_service.py` and integrated into `retrieve_context_for_question` in `backend/app/services/retrieval_service.py`.
+- **Why this helps**:
+  - pgvector recall is high but ranking is purely embedding-based; the cross-encoder re-scores the *full question + chunk text* jointly, which tends to surface more semantically precise context for Gemini.
+  - Everything runs locally (no extra API calls), preserving privacy and keeping RAG costs low.
+
 For **new databases**, the schema is created via `backend/db/schema.sql` on first container startup.
 
 For **existing local databases**, you can either:
