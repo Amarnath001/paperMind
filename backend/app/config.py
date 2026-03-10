@@ -40,3 +40,8 @@ class Config:
     # Embeddings
     EMBEDDING_MODEL = os.environ.get("EMBEDDING_MODEL", "BAAI/bge-small-en-v1.5")
     EMBEDDING_DIMENSION = int(os.environ.get("EMBEDDING_DIMENSION", "384"))
+
+    # LLMs
+    LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "gemini")
+    GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+    GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-1.5-flash")

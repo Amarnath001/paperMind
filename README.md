@@ -119,6 +119,19 @@ Milestone 3 adds native embedding generation and vector search powered by Postgr
 - **Chained Jobs** – The ingestion pipeline automatically queues an `embedding` job after chunking, chaining the workflow smoothly: `upload -> ingestion -> chunking -> embedding -> semantic search`.
 - **Search APIs** – Exposes two new semantic vector-search endpoints: `/search` (find chunks matching a text query in a workspace) and `/papers/<id>/similar` (find related papers using their cached centroid vector).
 
+## LLM Provider (Gemini)
+
+PaperMind keeps **embeddings local** (Sentence Transformers + pgvector) and uses an external LLM **only for text generation** (answering questions, summarisation, future RAG features).
+
+- **Provider**: Gemini (via the `google-generativeai` Python SDK).
+- **Usage**: LLMs are wrapped by `LLMService` in `backend/app/services/llm_service.py`, which exposes a simple `generate_text(prompt)` API and a `generate_answer(question, context_chunks)` helper for RAG-style prompts.
+- **Model**: Default model is `gemini-1.5-flash` (configurable via `GEMINI_MODEL`).
+- **Configuration**:
+  - Set `GEMINI_API_KEY` in your `.env` (get a key from [Google AI Studio](https://ai.google.dev/)).
+  - Optional: override `LLM_PROVIDER` (currently only `"gemini"` is supported) or `GEMINI_MODEL`.
+
+This prepares the system for Milestone 4 RAG features, where retrieved chunks from pgvector search will be passed into Gemini for high-quality answer generation.
+
 For **new databases**, the schema is created via `backend/db/schema.sql` on first container startup.
 
 For **existing local databases**, you can either:
