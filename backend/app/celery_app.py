@@ -13,7 +13,10 @@ def make_celery() -> Celery:
         "papermind",
         broker=redis_url,
         backend=redis_url,
-        include=["app.tasks.ingestion_tasks"],
+        include=[
+            "app.tasks.ingestion_tasks",
+            "app.tasks.embedding_tasks",
+        ],
     )
 
     # Reasonable defaults for early-stage production use

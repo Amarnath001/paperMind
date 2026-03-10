@@ -86,4 +86,30 @@ export function fetchJobs(params: {
   return apiFetch<Job[]>(path);
 }
 
+// Search API helpers
+
+export interface SearchResult {
+  chunk_id: string;
+  paper_id: string;
+  paper_title: string;
+  chunk_index: number;
+  text: string;
+  similarity: number;
+}
+
+export interface SearchRequest {
+  workspace_id: string;
+  query: string;
+  limit?: number;
+}
+
+export function searchChunks(
+  req: SearchRequest,
+): Promise<{ results: SearchResult[] }> {
+  return apiFetch<{ results: SearchResult[] }>("/search", {
+    method: "POST",
+    body: JSON.stringify(req),
+  });
+}
+
 

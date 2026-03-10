@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from uuid import UUID
 
@@ -13,4 +13,5 @@ class Chunk:
     text: str
     token_count: int | None
     created_at: datetime
+    embedding: list[float] | None = field(default=None, repr=False)
 

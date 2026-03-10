@@ -3,6 +3,9 @@
 -- Enable UUID helper extension (optional but convenient)
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+-- Enable pgvector extension for embedding support
+CREATE EXTENSION IF NOT EXISTS vector;
+
 -- Users
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY,
@@ -43,11 +46,15 @@ CREATE TABLE IF NOT EXISTS papers (
     filename TEXT NOT NULL,
     file_path TEXT NOT NULL,
     status TEXT NOT NULL CHECK (status IN ('uploaded','processing','ready','failed')),
+    embedding vector(384),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_papers_workspace_id
     ON papers (workspace_id);
+
+CREATE INDEX IF NOT EXISTS idx_papers_embedding
+    ON papers USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
 
 
 -- Jobs
@@ -77,9 +84,13 @@ CREATE TABLE IF NOT EXISTS chunks (
     chunk_index INTEGER NOT NULL,
     text TEXT NOT NULL,
     token_count INTEGER,
+    embedding vector(384),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_chunks_paper_id
     ON chunks (paper_id);
+
+CREATE INDEX IF NOT EXISTS idx_chunks_embedding
+    ON chunks USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
 

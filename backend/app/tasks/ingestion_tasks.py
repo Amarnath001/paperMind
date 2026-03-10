@@ -8,7 +8,9 @@ from celery import Task
 from app.celery_app import celery
 from app.services.chunking_service import chunk_text
 from app.services.job_service import (
+    create_job,
     delete_chunks_for_paper,
+    has_pending_embedding_job,
     insert_chunks,
     mark_job_failed,
     set_paper_status,
@@ -48,8 +50,24 @@ def ingest_paper_task(
         delete_chunks_for_paper(paper_uuid)
         insert_chunks(paper_uuid, chunks)
 
-        # Mark as completed
-        set_paper_status(paper_uuid, "ready")
+        # Queue the follow-up embedding job (idempotent: skip if one is active)
+        workspace_uuid = UUID(workspace_id)
+        if not has_pending_embedding_job(paper_uuid):
+            embedding_job = create_job(
+                workspace_id=workspace_uuid,
+                paper_id=paper_uuid,
+                job_type="embedding",
+                status="queued",
+            )
+            from app.tasks.embedding_tasks import embed_paper_task  # noqa: PLC0415
+            embed_paper_task.delay(
+                job_id=str(embedding_job["id"]),
+                paper_id=paper_id,
+                workspace_id=workspace_id,
+            )
+
+        # Mark ingestion as completed (embedding runs independently)
+        set_paper_status(paper_uuid, "processing")  # still processing — embedding pending
         update_job_status(job_uuid, status="completed", progress=100)
 
         return {"job_id": job_id, "paper_id": paper_id, "chunks": len(chunks)}

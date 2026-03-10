@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 from uuid import UUID, uuid4
 
 from app.db import get_db
@@ -110,4 +110,52 @@ def _row_to_job_dict(row: Any) -> Dict[str, Any]:
         "created_at": row[7],
         "updated_at": row[8],
     }
+
+
+def get_chunks_for_paper(paper_id: UUID) -> List[Dict[str, Any]]:
+    """Return all chunks for *paper_id* ordered by chunk_index."""
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT id, paper_id, chunk_index, text, token_count, created_at
+                FROM   chunks
+                WHERE  paper_id = %s
+                ORDER  BY chunk_index
+                """,
+                (str(paper_id),),
+            )
+            rows = cur.fetchall()
+    return [
+        {
+            "id": row[0],
+            "paper_id": row[1],
+            "chunk_index": row[2],
+            "text": row[3],
+            "token_count": row[4],
+            "created_at": row[5],
+        }
+        for row in rows
+    ]
+
+
+def has_pending_embedding_job(paper_id: UUID) -> bool:
+    """Return True if an active (queued/running) embedding job already exists.
+
+    Used to prevent duplicate embedding jobs being queued on retries or
+    re-ingestion runs.
+    """
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT 1 FROM jobs
+                WHERE  paper_id = %s
+                  AND  type     = 'embedding'
+                  AND  status   IN ('queued', 'running')
+                LIMIT 1
+                """,
+                (str(paper_id),),
+            )
+            return cur.fetchone() is not None
 

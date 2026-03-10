@@ -1,11 +1,11 @@
 "use client";
 
-import { FormEvent, useRef, useState } from "react";
+import { FormEvent, useRef, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { API_BASE_URL, getAuthHeader } from "@/src/lib/api";
 
-export default function UploadPage() {
+function UploadForm() {
   const searchParams = useSearchParams();
   const defaultWorkspaceId = searchParams.get("workspace_id") ?? "";
   const router = useRouter();
@@ -16,6 +16,8 @@ export default function UploadPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -52,7 +54,7 @@ export default function UploadPage() {
       if (!response.ok) {
         throw new Error(
           (data && (data.error || data.message)) ||
-            `Upload failed with status ${response.status}`,
+          `Upload failed with status ${response.status}`,
         );
       }
 
@@ -70,8 +72,6 @@ export default function UploadPage() {
       setLoading(false);
     }
   }
-
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   return (
     <main className="page-layout">
@@ -127,6 +127,14 @@ export default function UploadPage() {
         </form>
       </section>
     </main>
+  );
+}
+
+export default function UploadPage() {
+  return (
+    <Suspense fallback={<div>Loading upload form...</div>}>
+      <UploadForm />
+    </Suspense>
   );
 }
 
