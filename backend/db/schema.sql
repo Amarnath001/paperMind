@@ -94,3 +94,31 @@ CREATE INDEX IF NOT EXISTS idx_chunks_paper_id
 CREATE INDEX IF NOT EXISTS idx_chunks_embedding
     ON chunks USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
 
+
+-- Conversations
+CREATE TABLE IF NOT EXISTS conversations (
+    id UUID PRIMARY KEY,
+    workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    title TEXT,
+    created_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_conversations_workspace_id
+    ON conversations (workspace_id);
+
+
+-- Messages
+CREATE TABLE IF NOT EXISTS messages (
+    id UUID PRIMARY KEY,
+    conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+    role TEXT NOT NULL CHECK (role IN ('user','assistant')),
+    content TEXT NOT NULL,
+    citations JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_messages_conversation_id
+    ON messages (conversation_id);
+

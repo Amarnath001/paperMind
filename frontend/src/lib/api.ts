@@ -112,4 +112,85 @@ export function searchChunks(
   });
 }
 
+// Chat / RAG API helpers
+
+export interface Conversation {
+  id: string;
+  workspace_id: string;
+  title: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  conversation_id: string;
+  role: "user" | "assistant";
+  content: string;
+  citations?: any;
+  created_at: string;
+}
+
+export interface Citation {
+  chunk_id: string;
+  paper_id: string;
+  paper_title: string;
+  chunk_index: number;
+  label: string;
+}
+
+export interface AskResponse {
+  answer: string;
+  citations: Citation[];
+  retrieved_chunks: SearchResult[];
+  conversation_id: string;
+  messages: ChatMessage[];
+}
+
+export function createConversation(
+  workspaceId: string,
+  title?: string,
+): Promise<Conversation> {
+  return apiFetch<Conversation>("/chat/conversations", {
+    method: "POST",
+    body: JSON.stringify({ workspace_id: workspaceId, title }),
+  });
+}
+
+export function listConversations(
+  workspaceId: string,
+): Promise<Conversation[]> {
+  return apiFetch<Conversation[]>(`/chat/conversations?workspace_id=${workspaceId}`);
+}
+
+export function listMessages(
+  conversationId: string,
+): Promise<ChatMessage[]> {
+  return apiFetch<ChatMessage[]>(
+    `/chat/conversations/${conversationId}/messages`,
+  );
+}
+
+export function askQuestion(params: {
+  workspaceId: string;
+  conversationId?: string;
+  question: string;
+  limit?: number;
+  paperId?: string;
+}): Promise<AskResponse> {
+  const body: any = {
+    workspace_id: params.workspaceId,
+    question: params.question,
+    limit: params.limit,
+  };
+  if (params.conversationId) body.conversation_id = params.conversationId;
+  if (params.paperId) body.paper_id = params.paperId;
+
+  return apiFetch<AskResponse>("/chat/ask", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
 

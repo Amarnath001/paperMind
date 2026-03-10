@@ -132,6 +132,25 @@ PaperMind keeps **embeddings local** (Sentence Transformers + pgvector) and uses
 
 This prepares the system for Milestone 4 RAG features, where retrieved chunks from pgvector search will be passed into Gemini for high-quality answer generation.
 
+## Milestone 4 – RAG Chat with Citations
+
+Milestone 4 adds a retrieval-augmented chat experience over workspace libraries:
+
+- **Conversation storage** – New `conversations` and `messages` tables track chat sessions, participants, and message history (including JSONB `citations` on assistant messages).
+- **Retrieval service** – A dedicated retrieval layer uses local embeddings + pgvector (`chunks.embedding`) to fetch the most relevant chunks for a question, scoped to a workspace (and optionally a single paper).
+- **RAG answers with Gemini** – The `LLMService` uses Gemini to generate grounded answers from retrieved chunks via `generate_answer_with_citations`, returning both an answer and structured citation metadata.
+- **Chat APIs** – New `/chat` endpoints:
+  - `POST /chat/conversations` – create a workspace-scoped conversation.
+  - `GET /chat/conversations?workspace_id=...` – list conversations in a workspace.
+  - `GET /chat/conversations/<conversation_id>/messages` – fetch message history.
+  - `POST /chat/ask` – ask a question within a conversation, run retrieval, generate an answer with citations, and persist both user and assistant messages.
+- **Workspace & paper scoping** – All chat and retrieval operations enforce workspace membership, and `POST /chat/ask` can optionally restrict retrieval to a single paper via `paper_id`.
+- **Frontend chat UI** – A simple chat interface at `/workspace/[id]/chat` shows conversations, message history, and assistant answers with inline citations (paper title, chunk index, and labels like `[1]`, `[2]`).
+
+The full pipeline is now:
+
+`upload → ingestion → chunking → embedding → retrieval → Gemini answer (with citations)`.
+
 For **new databases**, the schema is created via `backend/db/schema.sql` on first container startup.
 
 For **existing local databases**, you can either:

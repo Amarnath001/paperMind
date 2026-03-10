@@ -25,6 +25,7 @@ def create_app(config_class: type = Config) -> Flask:
     from app.routes.papers import papers_bp
     from app.routes.jobs import jobs_bp
     from app.routes.search import search_bp
+    from app.routes.chat import chat_bp
 
     app.register_blueprint(health_bp, url_prefix="")
     app.register_blueprint(auth_bp, url_prefix="/auth")
@@ -32,5 +33,6 @@ def create_app(config_class: type = Config) -> Flask:
     app.register_blueprint(papers_bp, url_prefix="/papers")
     app.register_blueprint(jobs_bp, url_prefix="/jobs")
     app.register_blueprint(search_bp, url_prefix="/search")
+    app.register_blueprint(chat_bp, url_prefix="/chat")
 
     return app

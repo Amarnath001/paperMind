@@ -8,7 +8,7 @@ locally via Sentence Transformers and pgvector.
 
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 
 import google.generativeai as genai
 
@@ -72,6 +72,79 @@ class LLMService:
         )
 
         return self.generate_text(prompt)
+
+    def generate_answer_with_citations(
+        self,
+        question: str,
+        retrieved_chunks: List[Dict[str, Any]],
+    ) -> Dict[str, Any]:
+        """Generate an answer plus simple citations based on retrieved chunks.
+
+        The citations are derived from the *order* of retrieved_chunks rather
+        than parsing the model output. This is intentionally simple and robust:
+        chunks are labelled [1], [2], ... in the same order they are sent to
+        the model, and all of them are exposed as citation candidates.
+        """
+        if not question.strip():
+            raise ValueError("Question must not be empty.")
+
+        if not retrieved_chunks:
+            # No context: respond with a guarded answer.
+            answer = (
+                "I do not have any relevant excerpts from the library to answer "
+                "this question confidently."
+            )
+            return {"answer": answer, "citations": []}
+
+        # Truncate very long chunks to avoid huge prompts
+        MAX_CHARS_PER_CHUNK = 600
+        formatted_chunks: List[str] = []
+        citations: List[Dict[str, Any]] = []
+
+        for idx, chunk in enumerate(retrieved_chunks, start=1):
+            label = f"[{idx}]"
+            text = (chunk.get("text") or "").strip()
+            if len(text) > MAX_CHARS_PER_CHUNK:
+                text = text[:MAX_CHARS_PER_CHUNK] + "..."
+
+            paper_title = chunk.get("paper_title") or "Unknown paper"
+            chunk_index = chunk.get("chunk_index")
+
+            formatted_chunks.append(
+                f"{label} Paper: {paper_title}\n"
+                f"Chunk index: {chunk_index}\n"
+                f"Excerpt: {text}"
+            )
+
+            citations.append(
+                {
+                    "chunk_id": str(chunk.get("chunk_id")),
+                    "paper_id": str(chunk.get("paper_id")),
+                    "paper_title": paper_title,
+                    "chunk_index": chunk_index,
+                    "label": label,
+                }
+            )
+
+        context_block = "\n\n".join(formatted_chunks)
+
+        prompt = (
+            "You are a careful, concise research assistant.\n"
+            "Use ONLY the numbered excerpts below to answer the user's question.\n"
+            "If the excerpts do not contain enough information to answer, "
+            "explicitly say that the answer is not supported by the provided context.\n"
+            "When relevant, reference the excerpt numbers like [1], [2] in your answer.\n\n"
+            "Context excerpts:\n"
+            f"{context_block}\n\n"
+            f"Question: {question.strip()}\n\n"
+            "Answer (with references to [1], [2], etc where appropriate):"
+        )
+
+        answer_text = self.generate_text(prompt)
+        return {
+            "answer": answer_text,
+            "citations": citations,
+        }
 
 
 # ------------------------------------------------------------------------- #
