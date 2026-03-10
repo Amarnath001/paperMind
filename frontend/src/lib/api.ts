@@ -193,4 +193,39 @@ export function askQuestion(params: {
   });
 }
 
+// Insights API helpers
+
+export interface InsightTopic {
+  topic: string;
+  count: number;
+}
+
+export interface InsightPaper {
+  id: string;
+  title: string;
+  summary: string | null;
+  topics: string[] | null;
+  cluster_id: number | null;
+  created_at: string;
+}
+
+export interface ClusterGroup {
+  cluster_id: number;
+  papers: InsightPaper[];
+}
+
+export interface WorkspaceInsights {
+  total_papers: number;
+  clusters: ClusterGroup[];
+  topics: InsightTopic[];
+  recent_papers: InsightPaper[];
+}
+
+export function getWorkspaceInsights(
+  workspaceId: string,
+): Promise<WorkspaceInsights> {
+  return apiFetch<WorkspaceInsights>(`/insights/workspace/${workspaceId}`);
+}
+
+
 

@@ -31,6 +31,7 @@ from uuid import UUID
 from app.celery_app import celery
 from app.services.embedding_service import generate_embeddings_batch
 from app.services.job_service import (
+    create_job,
     get_chunks_for_paper,
     mark_job_failed,
     set_paper_status,
@@ -132,9 +133,34 @@ def embed_paper_task(
         update_job_status(job_uuid, status="completed", progress=100)
 
         # ------------------------------------------------------------------ #
-        # 8. Mark paper as ready — both ingestion and embedding are done
+        # 8. Mark paper as ready — ingestion + embedding are done
         # ------------------------------------------------------------------ #
         set_paper_status(paper_uuid, "ready")
+
+        # ------------------------------------------------------------------ #
+        # 9. Queue a follow-up analysis job (summary, topics, clustering)
+        # ------------------------------------------------------------------ #
+        try:
+            from app.tasks.analysis_tasks import analyze_paper_task  # noqa: PLC0415
+
+            workspace_uuid = UUID(workspace_id)
+            analysis_job = create_job(
+                workspace_id=workspace_uuid,
+                paper_id=paper_uuid,
+                job_type="analysis",
+                status="queued",
+            )
+            analyze_paper_task.delay(
+                job_id=str(analysis_job["id"]),
+                paper_id=paper_id,
+                workspace_id=workspace_id,
+            )
+        except Exception as analysis_exc:  # noqa: BLE001
+            logger.warning(
+                "Failed to queue analysis job for paper %s: %s",
+                paper_id,
+                analysis_exc,
+            )
 
         logger.info("Embedding task completed | paper=%s", paper_id)
         return {

@@ -16,6 +16,7 @@ def make_celery() -> Celery:
         include=[
             "app.tasks.ingestion_tasks",
             "app.tasks.embedding_tasks",
+            "app.tasks.analysis_tasks",
         ],
     )
 

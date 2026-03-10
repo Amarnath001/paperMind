@@ -169,6 +169,24 @@ To improve answer quality without adding any external API costs, PaperMind perfo
   - pgvector recall is high but ranking is purely embedding-based; the cross-encoder re-scores the *full question + chunk text* jointly, which tends to surface more semantically precise context for Gemini.
   - Everything runs locally (no extra API calls), preserving privacy and keeping RAG costs low.
 
+## Milestone 5 – Research Insights
+
+Milestone 5 adds higher-level intelligence over the paper library, beyond retrieval and chat:
+
+- **Paper summaries** – After embedding, an `analysis` job runs a Gemini-powered summarisation step via `summarization_service.generate_paper_summary`, storing a 3–5 sentence summary in `papers.summary`.
+- **Topic extraction** – The same analysis job uses `topic_service.extract_paper_topics` to extract 5–8 short topics/keywords per paper, stored in `papers.topics` (as `TEXT[]`).
+- **Paper clustering** – The `clustering_service` groups papers per workspace using KMeans over stored paper embeddings, writing a `cluster_id` back to each paper.
+- **Workspace insights API** – `insight_service.get_workspace_insights` powers new `/insights` endpoints to return:
+  - `total_papers`
+  - `clusters` (papers grouped by `cluster_id`)
+  - `topics` (aggregated topic counts)
+  - `recent_papers` (latest papers with summaries, topics, clusters).
+- **Insights dashboard** – A new UI at `/workspace/[id]/insights` surfaces these insights: total papers, top topics, cluster cards (with per-cluster papers and summaries), and a recent papers list.
+
+The full pipeline now looks like:
+
+`upload → ingestion → chunking → embedding → analysis (summary/topics/clusters) → retrieval → reranking → Gemini answer`.
+
 For **new databases**, the schema is created via `backend/db/schema.sql` on first container startup.
 
 For **existing local databases**, you can either:

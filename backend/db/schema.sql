@@ -47,6 +47,9 @@ CREATE TABLE IF NOT EXISTS papers (
     file_path TEXT NOT NULL,
     status TEXT NOT NULL CHECK (status IN ('uploaded','processing','ready','failed')),
     embedding vector(384),
+    summary TEXT,
+    topics TEXT[],
+    cluster_id INTEGER,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

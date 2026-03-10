@@ -119,6 +119,7 @@ export default function WorkspacePage() {
         </div>
         <nav>
           <a href="/dashboard">Back to dashboard</a>
+          <a href={`/workspace/${workspaceId}/insights`}>Insights</a>
           <a href={`/workspace/${workspaceId}/chat`}>Chat</a>
           <a href={`/upload?workspace_id=${workspaceId}`}>Upload paper</a>
         </nav>
