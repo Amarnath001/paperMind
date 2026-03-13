@@ -8,7 +8,12 @@ from flask import Blueprint, current_app, jsonify, request
 from app import limiter
 from app.db import get_db
 from app.services.auth_service import require_auth
-from app.services.storage_service import ALLOWED_EXTENSIONS, allowed_file, save_paper_file
+from app.services.storage_service import (
+    ALLOWED_EXTENSIONS,
+    allowed_file,
+    save_paper_file,
+    delete_paper_file,
+)
 from app.services.job_service import create_job
 from app.services.vector_service import search_similar_papers
 from app.tasks.ingestion_tasks import ingest_paper_task
@@ -220,6 +225,58 @@ def get_paper(paper_id: str):
         "created_at": row[6].isoformat(),
     }
     return jsonify(paper)
+
+
+@papers_bp.route("/<paper_id>", methods=["DELETE"])
+def delete_paper(paper_id: str):
+    """Delete a paper the user has access to, along with its stored file.
+
+    Related rows in chunks/jobs are removed via database ON DELETE CASCADE.
+    """
+    try:
+        user = require_auth()
+    except Exception as exc:  # noqa: BLE001
+        return jsonify({"error": str(exc)}), 401
+
+    try:
+        paper_uuid = UUID(paper_id)
+    except ValueError:
+        return jsonify({"error": "invalid paper id"}), 400
+
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            # Ensure the user is a member of the workspace that owns this paper
+            cur.execute(
+                """
+                SELECT p.file_path, p.workspace_id
+                FROM   papers p
+                JOIN   workspace_members m
+                  ON   p.workspace_id = m.workspace_id
+                WHERE  p.id = %s
+                  AND  m.user_id = %s
+                """,
+                (str(paper_uuid), str(user["id"])),
+            )
+            row = cur.fetchone()
+
+        if not row:
+            return jsonify({"error": "paper not found or access denied"}), 404
+
+        file_path = row[0]
+
+        # Delete DB row; related chunks/jobs follow via FK cascades
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM papers WHERE id = %s", (str(paper_uuid),))
+        conn.commit()
+
+    # Best-effort file deletion (do not fail the API if this raises)
+    try:
+        if file_path:
+            delete_paper_file(file_path)
+    except Exception:
+        pass
+
+    return jsonify({"status": "deleted"}), 200
 
 
 @papers_bp.route("/<paper_id>/similar", methods=["GET"])

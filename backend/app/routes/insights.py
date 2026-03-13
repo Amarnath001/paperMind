@@ -47,13 +47,19 @@ def get_workspace_insights_route(workspace_id: str):
 
     # Normalise UUIDs and datetimes
     def _serialise_paper(p: Dict[str, Any]) -> Dict[str, Any]:
+        created = p.get("created_at")
+        if hasattr(created, "isoformat"):
+            created_str = created.isoformat()
+        else:
+            created_str = str(created) if created is not None else ""
+
         return {
             "id": str(p["id"]),
             "title": p["title"],
-            "summary": p["summary"],
-            "topics": p["topics"],
-            "cluster_id": p["cluster_id"],
-            "created_at": p["created_at"].isoformat(),
+            "summary": p.get("summary"),
+            "topics": p.get("topics"),
+            "cluster_id": p.get("cluster_id"),
+            "created_at": created_str,
         }
 
     clusters_out: List[Dict[str, Any]] = []
@@ -102,13 +108,19 @@ def get_workspace_clusters_route(workspace_id: str):
     clusters = get_workspace_clusters(workspace_uuid)
 
     def _serialise_paper(p: Dict[str, Any]) -> Dict[str, Any]:
+        created = p.get("created_at")
+        if hasattr(created, "isoformat"):
+            created_str = created.isoformat()
+        else:
+            created_str = str(created) if created is not None else ""
+
         return {
             "id": str(p["id"]),
             "title": p["title"],
-            "summary": p["summary"],
-            "topics": p["topics"],
-            "cluster_id": p["cluster_id"],
-            "created_at": p["created_at"].isoformat(),
+            "summary": p.get("summary"),
+            "topics": p.get("topics"),
+            "cluster_id": p.get("cluster_id"),
+            "created_at": created_str,
         }
 
     clusters_out: List[Dict[str, Any]] = []

@@ -7,8 +7,9 @@ from typing import BinaryIO, Optional, Tuple
 
 import boto3
 from botocore.client import Config as BotoConfig
-from flask import current_app
 from werkzeug.datastructures import FileStorage
+
+from app.config import Config
 
 
 ALLOWED_EXTENSIONS = {"pdf"}
@@ -31,7 +32,12 @@ def _workspace_object_key(workspace_id: str, filename: str) -> str:
 
 
 def _get_s3_client():
-    cfg = current_app.config
+    cfg = {
+        "S3_REGION": Config.S3_REGION,
+        "S3_ACCESS_KEY_ID": Config.S3_ACCESS_KEY_ID,
+        "S3_SECRET_ACCESS_KEY": Config.S3_SECRET_ACCESS_KEY,
+        "S3_ENDPOINT_URL": Config.S3_ENDPOINT_URL,
+    }
     session = boto3.session.Session()
     client = session.client(
         "s3",
@@ -52,13 +58,13 @@ def save_paper_file(file: FileStorage, workspace_id: str) -> Tuple[str, str]:
     with existing behaviour). In ``s3`` mode this uploads the object and
     returns the object key using the same convention.
     """
-    provider = current_app.config.get("STORAGE_PROVIDER", "local").lower()
+    provider = Config.STORAGE_PROVIDER.lower()
     filename = _normalise_filename(file.filename)
 
     if provider == "s3":
         object_key = _workspace_object_key(workspace_id, filename)
         client = _get_s3_client()
-        bucket = current_app.config.get("S3_BUCKET_NAME")
+        bucket = Config.S3_BUCKET_NAME
         if not bucket:
             raise RuntimeError("S3_BUCKET_NAME must be set when STORAGE_PROVIDER='s3'")
         # Upload file stream directly
@@ -67,7 +73,7 @@ def save_paper_file(file: FileStorage, workspace_id: str) -> Tuple[str, str]:
         return filename, object_key
 
     # Default: local filesystem storage
-    upload_root = Path(current_app.config["UPLOAD_FOLDER"])
+    upload_root = Path(Config.UPLOAD_FOLDER)
     workspace_dir = upload_root / workspace_id
     workspace_dir.mkdir(parents=True, exist_ok=True)
 
@@ -94,7 +100,7 @@ def get_local_filesystem_path(storage_path_or_key: str) -> Path:
 
     This is only valid when using the ``local`` storage provider.
     """
-    upload_root = Path(current_app.config["UPLOAD_FOLDER"])
+    upload_root = Path(Config.UPLOAD_FOLDER)
     # Existing behaviour stores paths relative to the backend root, e.g.
     # "uploads/<workspace>/<file>". Support both relative-to-root and
     # relative-to-uploads forms.
@@ -112,11 +118,11 @@ def open_paper_file_for_read(storage_path_or_key: str) -> BinaryIO:
     at the start. The caller is responsible for closing the handle; temporary
     files are deleted when closed.
     """
-    provider = current_app.config.get("STORAGE_PROVIDER", "local").lower()
+    provider = Config.STORAGE_PROVIDER.lower()
 
     if provider == "s3":
         client = _get_s3_client()
-        bucket = current_app.config.get("S3_BUCKET_NAME")
+        bucket = Config.S3_BUCKET_NAME
         if not bucket:
             raise RuntimeError("S3_BUCKET_NAME must be set when STORAGE_PROVIDER='s3'")
 
@@ -132,10 +138,10 @@ def open_paper_file_for_read(storage_path_or_key: str) -> BinaryIO:
 
 def delete_paper_file(storage_path_or_key: str) -> None:
     """Delete a stored paper file, if it exists."""
-    provider = current_app.config.get("STORAGE_PROVIDER", "local").lower()
+    provider = Config.STORAGE_PROVIDER.lower()
     if provider == "s3":
         client = _get_s3_client()
-        bucket = current_app.config.get("S3_BUCKET_NAME")
+        bucket = Config.S3_BUCKET_NAME
         if not bucket:
             return
         client.delete_object(Bucket=bucket, Key=storage_path_or_key)

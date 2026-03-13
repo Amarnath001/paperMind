@@ -130,10 +130,13 @@ class LLMService:
 
         prompt = (
             "You are a careful, concise research assistant.\n"
-            "Use ONLY the numbered excerpts below to answer the user's question.\n"
-            "If the excerpts do not contain enough information to answer, "
-            "explicitly say that the answer is not supported by the provided context.\n"
-            "When relevant, reference the excerpt numbers like [1], [2] in your answer.\n\n"
+            "Use the numbered excerpts below as your primary evidence when answering.\n"
+            "If the excerpts only partially cover the question, still give the best\n"
+            "possible explanation you can, being explicit about what is grounded in\n"
+            "the excerpts and what is a reasonable inference beyond them.\n"
+            "Avoid claiming that you cannot answer at all unless there is truly no\n"
+            "relevant information in the excerpts. When relevant, reference the\n"
+            "excerpt numbers like [1], [2] in your answer.\n\n"
             "Context excerpts:\n"
             f"{context_block}\n\n"
             f"Question: {question.strip()}\n\n"

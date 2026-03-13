@@ -2,10 +2,9 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Optional
-
-from flask import current_app
 from pypdf import PdfReader
 
+from app.config import Config
 from app.services.storage_service import (
     get_local_filesystem_path,
     open_paper_file_for_read,
@@ -38,7 +37,7 @@ def extract_text_from_pdf(path_or_key: str, *, storage_managed: bool = False) ->
         reader = PdfReader(str(pdf_path))
         return _extract_text_from_reader(reader)
 
-    provider = current_app.config.get("STORAGE_PROVIDER", "local").lower()
+    provider = Config.STORAGE_PROVIDER.lower()
     if provider == "s3":
         # Fetch via storage abstraction (downloads to a temp file)
         with open_paper_file_for_read(path_or_key) as fh:

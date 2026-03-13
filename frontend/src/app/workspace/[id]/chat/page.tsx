@@ -112,14 +112,23 @@ export default function WorkspaceChatPage() {
     if (!msg.citations || !Array.isArray(msg.citations) || msg.citations.length === 0) {
       return null;
     }
+    const labels = Array.from(
+      new Set(
+        msg.citations
+          .map((c: any) => c.label)
+          .filter((label: unknown): label is string => typeof label === "string"),
+      ),
+    );
     return (
-      <ul style={{ marginTop: "0.25rem", paddingLeft: "1.25rem", fontSize: "0.8rem", color: "#4B5563" }}>
-        {msg.citations.map((c: any) => (
-          <li key={`${c.chunk_id}-${c.label}`}>
-            <strong>{c.label}</strong> {c.paper_title} (chunk {c.chunk_index})
-          </li>
+      <div style={{ marginTop: "0.35rem", fontSize: "0.75rem", color: "#6B7280" }}>
+        Sources{" "}
+        {labels.map((label, idx) => (
+          <span key={label}>
+            <strong>{label}</strong>
+            {idx < labels.length - 1 ? ", " : ""}
+          </span>
         ))}
-      </ul>
+      </div>
     );
   }
 

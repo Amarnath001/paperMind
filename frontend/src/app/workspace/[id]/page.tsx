@@ -110,6 +110,20 @@ export default function WorkspacePage() {
     }
   }
 
+  async function handleDeletePaper(paperId: string) {
+    const ok = globalThis.window?.confirm(
+      "Delete this paper? This will remove its chunks, jobs, and insights.",
+    );
+    if (!ok) return;
+    setError(null);
+    try {
+      await apiFetch(`/papers/${paperId}`, { method: "DELETE" });
+      await load();
+    } catch (err: any) {
+      setError(err.message || "Failed to delete paper");
+    }
+  }
+
   return (
     <div className="page-layout">
       <header className="page-header">
@@ -178,7 +192,15 @@ export default function WorkspacePage() {
         ) : (
           <ul className="paper-list">
             {papers.map((p) => (
-              <li key={p.id}>
+              <li
+                key={p.id}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "flex-start",
+                  gap: "0.75rem",
+                }}
+              >
                 <div>
                   <strong>{p.title}</strong>
                   <div className="paper-meta">
@@ -196,6 +218,22 @@ export default function WorkspacePage() {
                     · {new Date(p.created_at).toLocaleString()}
                   </div>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => handleDeletePaper(p.id)}
+                  style={{
+                    borderRadius: "999px",
+                    border: "1px solid #F97373",
+                    padding: "0.25rem 0.75rem",
+                    fontSize: "0.8rem",
+                    color: "#B91C1C",
+                    background: "#FEF2F2",
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  Delete
+                </button>
               </li>
             ))}
           </ul>

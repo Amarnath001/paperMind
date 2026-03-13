@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import AppShell from "@/src/components/AppShell";
+import AppShellWrapper from "@/src/components/AppShellWrapper";
 
 export const metadata: Metadata = {
   title: "PaperMind – Research Intelligence Platform",
@@ -12,17 +12,10 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const isBarePage =
-    typeof globalThis === "undefined" ||
-    typeof globalThis.window === "undefined" ||
-    globalThis.window.location.pathname.startsWith("/login") ||
-    globalThis.window.location.pathname.startsWith("/signup") ||
-    globalThis.window.location.pathname === "/";
-
   return (
     <html lang="en">
       <body>
-        {isBarePage ? <>{children}</> : <AppShell>{children}</AppShell>}
+        <AppShellWrapper>{children}</AppShellWrapper>
       </body>
     </html>
   );
