@@ -33,7 +33,7 @@ export default function WorkspaceInsightsPage() {
   }, [workspaceId]);
 
   return (
-    <main className="page-layout">
+    <div className="page-layout">
       <header className="page-header">
         <div>
           <h1>Workspace insights</h1>
@@ -154,7 +154,7 @@ export default function WorkspaceInsightsPage() {
           </section>
         </>
       )}
-    </main>
+    </div>
   );
 }
 

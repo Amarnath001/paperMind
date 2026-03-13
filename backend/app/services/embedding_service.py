@@ -3,10 +3,9 @@
 The model is loaded once (lazily on first use) and cached for the lifetime
 of the process, so it is not reloaded on every request or Celery task.
 
-To swap the embedding backend, replace ``_load_model`` / ``_get_model`` with
-an alternative implementation (e.g. OpenAI, Cohere, ONNX runtime) while
-keeping the public interface — ``generate_embedding`` and
-``generate_embeddings_batch`` — unchanged.
+Embeddings are generated entirely locally; to swap the embedding backend,
+replace ``_load_model`` / ``_get_model`` while keeping the public interface —
+``generate_embedding`` and ``generate_embeddings_batch`` — unchanged.
 """
 
 from __future__ import annotations

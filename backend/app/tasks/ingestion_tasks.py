@@ -36,8 +36,8 @@ def ingest_paper_task(
         update_job_status(job_uuid, status="running", progress=0)
         set_paper_status(paper_uuid, "processing")
 
-        # Extract text
-        text = extract_text_from_pdf(file_path)
+        # Extract text (supports both local and S3-backed storage)
+        text = extract_text_from_pdf(file_path, storage_managed=True)
         if not text.strip():
             raise ValueError("No extractable text found in PDF")
 

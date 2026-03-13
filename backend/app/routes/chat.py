@@ -5,6 +5,7 @@ from uuid import UUID, uuid4
 
 from flask import Blueprint, jsonify, request
 
+from app import limiter
 from app.db import get_db
 from app.services.auth_service import require_auth
 from app.services.conversation_service import (
@@ -147,6 +148,7 @@ def list_messages_route(conversation_id: str):
 
 
 @chat_bp.route("/ask", methods=["POST"])
+@limiter.limit("60/hour")  # type: ignore[arg-type]
 def ask_route():
     try:
         user = require_auth()

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from flask import Blueprint, jsonify, request
 
+from app import limiter
+
 from app.services.auth_service import (
     create_access_token,
     create_user,
@@ -15,6 +17,7 @@ auth_bp = Blueprint("auth", __name__)
 
 
 @auth_bp.route("/signup", methods=["POST"])
+@limiter.limit("5/minute")  # type: ignore[arg-type]
 def signup():
     data = request.get_json(silent=True) or {}
     email = (data.get("email") or "").strip().lower()
@@ -46,6 +49,7 @@ def signup():
 
 
 @auth_bp.route("/login", methods=["POST"])
+@limiter.limit("10/minute")  # type: ignore[arg-type]
 def login():
     data = request.get_json(silent=True) or {}
     email = (data.get("email") or "").strip().lower()

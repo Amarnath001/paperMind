@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 
 import {
   askQuestion,
@@ -15,7 +15,6 @@ import {
 export default function WorkspaceChatPage() {
   const params = useParams<{ id: string }>();
   const workspaceId = params.id;
-  const router = useRouter();
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
@@ -88,7 +87,7 @@ export default function WorkspaceChatPage() {
       // create a conversation implicitly
       await handleNewConversation();
     }
-    const convId = selectedConversationId || conversations[0]?.id;
+    const convId = selectedConversationId ?? conversations[0]?.id;
     if (!convId) return;
 
     setSending(true);
@@ -125,7 +124,7 @@ export default function WorkspaceChatPage() {
   }
 
   return (
-    <main className="page-layout">
+    <div className="page-layout">
       <header className="page-header">
         <div>
           <h1>Workspace chat</h1>
@@ -138,8 +137,8 @@ export default function WorkspaceChatPage() {
 
       {error && <p className="auth-error">{error}</p>}
 
-      <section className="card" style={{ display: "flex", gap: "1rem" }}>
-        <aside style={{ width: "260px", borderRight: "1px solid #E5E7EB", paddingRight: "1rem" }}>
+      <section className="card chat-layout">
+        <aside className="chat-sidebar">
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.75rem" }}>
             <h2 style={{ fontSize: "1rem" }}>Conversations</h2>
             <button type="button" onClick={handleNewConversation} disabled={loadingConversations}>
@@ -178,17 +177,8 @@ export default function WorkspaceChatPage() {
           )}
         </aside>
 
-        <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-          <div
-            style={{
-              flex: 1,
-              minHeight: "260px",
-              maxHeight: "60vh",
-              overflowY: "auto",
-              paddingRight: "0.5rem",
-              marginBottom: "0.75rem",
-            }}
-          >
+        <div className="chat-main">
+          <div className="chat-messages">
             {loadingMessages ? (
               <p>Loading messages...</p>
             ) : messages.length === 0 ? (
@@ -229,24 +219,21 @@ export default function WorkspaceChatPage() {
             )}
           </div>
 
-          <form onSubmit={handleSend} className="upload-form">
-            <label>
-              Ask a question
-              <input
-                type="text"
-                value={question}
-                onChange={(e) => setQuestion(e.target.value)}
-                placeholder="Ask about the papers in this workspace..."
-                disabled={sending}
-              />
-            </label>
+          <form onSubmit={handleSend} className="chat-input">
+            <input
+              type="text"
+              value={question}
+              onChange={(e) => setQuestion(e.target.value)}
+              placeholder="Ask about the papers in this workspace..."
+              disabled={sending}
+            />
             <button type="submit" disabled={sending || !question.trim()}>
               {sending ? "Thinking..." : "Send"}
             </button>
           </form>
         </div>
       </section>
-    </main>
+    </div>
   );
 }
 

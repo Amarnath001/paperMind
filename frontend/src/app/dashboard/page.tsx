@@ -58,7 +58,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <main className="page-layout">
+    <div className="page-layout">
       <header className="page-header">
         <div>
           <h1>Workspaces</h1>
@@ -103,7 +103,7 @@ export default function DashboardPage() {
           </ul>
         )}
       </section>
-    </main>
+    </div>
   );
 }
 

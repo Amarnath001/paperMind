@@ -5,6 +5,7 @@ from uuid import UUID, uuid4
 
 from flask import Blueprint, current_app, jsonify, request
 
+from app import limiter
 from app.db import get_db
 from app.services.auth_service import require_auth
 from app.services.storage_service import ALLOWED_EXTENSIONS, allowed_file, save_paper_file
@@ -28,6 +29,7 @@ def _user_is_member(conn, workspace_id: UUID, user_id: UUID) -> bool:
 
 
 @papers_bp.route("/upload", methods=["POST"])
+@limiter.limit("30/hour")  # type: ignore[arg-type]
 def upload_paper():
     try:
         user = require_auth()

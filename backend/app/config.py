@@ -34,10 +34,7 @@ class Config:
     # Redis
     REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
 
-    # OpenAI (for future use)
-    OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
-
-    # Embeddings
+    # Embeddings (local)
     EMBEDDING_MODEL = os.environ.get("EMBEDDING_MODEL", "BAAI/bge-small-en-v1.5")
     EMBEDDING_DIMENSION = int(os.environ.get("EMBEDDING_DIMENSION", "384"))
 
@@ -45,6 +42,14 @@ class Config:
     LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "gemini")
     GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
     GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-1.5-flash")
+
+    # Storage
+    STORAGE_PROVIDER = os.environ.get("STORAGE_PROVIDER", "local")  # local | s3
+    S3_BUCKET_NAME = os.environ.get("S3_BUCKET_NAME", "")
+    S3_REGION = os.environ.get("S3_REGION", "")
+    S3_ACCESS_KEY_ID = os.environ.get("S3_ACCESS_KEY_ID", "")
+    S3_SECRET_ACCESS_KEY = os.environ.get("S3_SECRET_ACCESS_KEY", "")
+    S3_ENDPOINT_URL = os.environ.get("S3_ENDPOINT_URL", "")
 
     # Retrieval / reranking
     RERANKER_MODEL = os.environ.get(

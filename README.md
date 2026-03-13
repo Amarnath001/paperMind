@@ -30,8 +30,6 @@ Multi-Agent Research Intelligence Platform for processing research papers with A
    cp .env.example .env
    ```
 
-   Add `OPENAI_API_KEY` to `.env` when ready for AI features.
-
 3. **Run with Docker Compose**
 
    ```bash
@@ -242,6 +240,28 @@ Then start the stack again:
 ```bash
 docker compose up --build
 ```
+
+## Milestone 6 – Production Deployment & CI/CD
+
+Milestone 6 focuses on productionising PaperMind while keeping local development simple:
+
+- **Storage abstraction (local + S3-compatible)** – `storage_service` now supports both local filesystem storage (default for development) and S3-compatible object storage (AWS S3, Cloudflare R2, etc.), controlled via `STORAGE_PROVIDER` and associated `S3_*` environment variables. Workers access PDFs through the same abstraction, so ingestion continues to work in either mode.
+- **Production configuration** – `Config` is fully environment-driven and grouped by concern (database, Redis, embeddings, LLMs, storage, retrieval). `.env.example` documents the new storage-related variables and remains safe for local use.
+- **Logging & observability basics** – The Flask app logs each request with method, path, status, and duration in a structured, container-friendly format and captures uncaught exceptions without exposing details to clients. Celery continues to emit standard worker logs.
+- **Rate limiting & security hardening** – Sensitive endpoints such as `/auth/signup`, `/auth/login`, `/papers/upload`, and `/chat/ask` are protected by lightweight rate limits using `Flask-Limiter`, in addition to existing auth and validation. Upload handling still enforces PDF-only uploads and a 20MB size cap.
+- **Automated tests** – A minimal pytest-based backend test suite has been added (for example, basic `/healthz` and auth validation checks), providing a foundation to grow coverage over time.
+- **GitHub Actions CI** – Workflows under `.github/workflows/` now:
+  - Run backend tests (`backend-ci.yml`) against a real Postgres + Redis stack.
+  - Build the Next.js frontend (`frontend-ci.yml`) to catch compile-time issues.
+  - Build backend and frontend Docker images (`docker-build.yml`) to ensure container definitions remain valid.
+
+In production you will typically run:
+
+- the **backend API** (Flask app behind a WSGI server such as gunicorn) connected to managed Postgres, Redis, and optional S3-compatible storage;
+- one or more **Celery workers** using the same codebase and environment for ingestion, embedding, and analysis tasks;
+- the **frontend** (Next.js) either as a container or as a static export behind a CDN, configured to talk to the backend API.
+
+Local development remains unchanged: `docker compose up --build` starts Postgres, Redis, backend API, Celery worker, and frontend, all using local filesystem storage by default.
 
 ## License
 

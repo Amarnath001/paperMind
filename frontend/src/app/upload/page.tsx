@@ -74,7 +74,7 @@ function UploadForm() {
   }
 
   return (
-    <main className="page-layout">
+    <div className="page-layout">
       <header className="page-header">
         <div>
           <h1>Upload paper</h1>
@@ -126,7 +126,7 @@ function UploadForm() {
           </button>
         </form>
       </section>
-    </main>
+    </div>
   );
 }
 

@@ -111,7 +111,7 @@ export default function WorkspacePage() {
   }
 
   return (
-    <main className="page-layout">
+    <div className="page-layout">
       <header className="page-header">
         <div>
           <h1>{workspace?.name ?? "Workspace"}</h1>
@@ -201,7 +201,7 @@ export default function WorkspacePage() {
           </ul>
         )}
       </section>
-    </main>
+    </div>
   );
 }
 
