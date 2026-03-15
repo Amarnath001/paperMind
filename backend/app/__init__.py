@@ -56,8 +56,19 @@ def create_app(config_class: type = Config) -> Flask:
     # Ensure upload directory exists for local storage
     os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 
-    # CORS – can be tightened further via env/config if needed
-    CORS(app)
+    # CORS: explicit origins for Vercel frontend + local dev; supports credentials (e.g. Authorization header)
+    origins = app.config.get("CORS_ORIGINS") or [
+        "https://paper-mind-six.vercel.app",
+        "http://localhost:3000",
+    ]
+    CORS(
+        app,
+        origins=origins,
+        supports_credentials=True,
+        allow_headers=["Content-Type", "Authorization"],
+        methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+        expose_headers=[],
+    )
 
     # Rate limiting
     global limiter
@@ -71,6 +82,15 @@ def create_app(config_class: type = Config) -> Flask:
     @app.before_request
     def _start_timer() -> None:  # type: ignore[override]
         g._start_time = time.time()
+
+    @app.before_request
+    def _handle_options_preflight():  # type: ignore[override]
+        """Respond to OPTIONS (preflight) with 200 so Flask-CORS can attach CORS headers."""
+        if request.method == "OPTIONS":
+            from flask import make_response
+
+            return make_response(("", 200))
+
 
     @app.after_request
     def _log_request(response: Response) -> Response:  # type: ignore[override]

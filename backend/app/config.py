@@ -28,6 +28,10 @@ class Config:
     # Flask
     SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret-key-change-in-production")
 
+    # CORS: allowed origins for browser requests (Vercel frontend + local dev)
+    CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "https://paper-mind-six.vercel.app,http://localhost:3000").strip().split(",")
+    CORS_ORIGINS = [o.strip() for o in CORS_ORIGINS if o.strip()]
+
     # JWT
     JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", SECRET_KEY)
     JWT_ALGORITHM = "HS256"
