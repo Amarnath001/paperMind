@@ -56,13 +56,20 @@ def create_app(config_class: type = Config) -> Flask:
     # Ensure upload directory exists for local storage
     os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 
-    # CORS: explicit origins for Vercel frontend + local dev; supports credentials (e.g. Authorization header)
-    origins = app.config.get("CORS_ORIGINS") or [
+    # CORS: parse comma-separated string from env into list; fallback to default origins
+    _raw = app.config.get("CORS_ORIGINS")
+    _default_origins = [
         "https://paper-mind-six.vercel.app",
         "https://paper-mind-pla.vercel.app",
         "https://paper-mind.vercel.app",
         "http://localhost:3000",
     ]
+    if _raw is None or (isinstance(_raw, (list, tuple)) and len(_raw) == 0):
+        origins = _default_origins
+    elif isinstance(_raw, str):
+        origins = [o.strip() for o in _raw.split(",") if o.strip()] or _default_origins
+    else:
+        origins = list(_raw)
     CORS(
         app,
         resources={r"/*": {"origins": origins}},
@@ -153,5 +160,11 @@ def create_app(config_class: type = Config) -> Flask:
     @app.route("/<path:path>", methods=["OPTIONS"])
     def _options_catchall(path: str):
         return "", 200
+
+    # Startup log: CORS origins and registered routes (verify deployed app)
+    logger.info("CORS_ORIGINS=%s", origins)
+    for rule in sorted(app.url_map.iter_rules(), key=lambda r: r.rule):
+        methods = ",".join(sorted(rule.methods - {"HEAD", "OPTIONS"})) or "GET"
+        logger.info("route %s %s", rule.rule, methods)
 
     return app
