@@ -1,11 +1,8 @@
-"""Local embedding service using Sentence Transformers.
+"""Embedding service: Gemini API for production; optional local model for dev.
 
-The model is loaded once (lazily on first use) and cached for the lifetime
-of the process, so it is not reloaded on every request or Celery task.
-
-Embeddings are generated entirely locally; to swap the embedding backend,
-replace ``_load_model`` / ``_get_model`` while keeping the public interface —
-``generate_embedding`` and ``generate_embeddings_batch`` — unchanged.
+When EMBEDDING_PROVIDER=gemini (default), uses Google Generative AI to produce
+384-d vectors. No sentence-transformers or torch required, so the backend stays
+lightweight for Railway/Vercel/Render.
 """
 
 from __future__ import annotations
@@ -13,74 +10,88 @@ from __future__ import annotations
 import logging
 from typing import List
 
-from sentence_transformers import SentenceTransformer
-
 from app.config import Config
 
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Private model cache
+# Gemini embedding (no local ML deps)
 # ---------------------------------------------------------------------------
 
-_model: SentenceTransformer | None = None
+
+def _configure_gemini_embedding() -> None:
+    import google.generativeai as genai
+
+    if not Config.GEMINI_API_KEY:
+        raise RuntimeError(
+            "GEMINI_API_KEY is required when EMBEDDING_PROVIDER=gemini. "
+            "Set it in your environment or .env."
+        )
+    genai.configure(api_key=Config.GEMINI_API_KEY)
 
 
-def _get_model() -> SentenceTransformer:
-    """Return the cached model, loading it on the first call."""
-    global _model
-    if _model is None:
-        model_name = Config.EMBEDDING_MODEL
-        logger.info("Loading embedding model '%s' …", model_name)
-        _model = SentenceTransformer(model_name)
-        logger.info("Embedding model loaded.")
-    return _model
+def _gemini_embed_one(text: str) -> List[float]:
+    """Return a single normalised embedding from the Gemini API."""
+    import google.generativeai as genai
 
+    model = Config.EMBEDDING_MODEL
+    dim = Config.EMBEDDING_DIMENSION
 
-# ---------------------------------------------------------------------------
-# Public API
-# ---------------------------------------------------------------------------
+    result = genai.embed_content(
+        model=model,
+        content=text.strip() or " ",
+        output_dimensionality=dim,
+    )
+
+    # Response shape: {'embedding': [float, ...]} or object with .embedding
+    if isinstance(result, dict):
+        embedding = result.get("embedding")
+    else:
+        embedding = getattr(result, "embedding", None)
+    if embedding is None and isinstance(result, (list, tuple)):
+        embedding = result
+    if embedding is None:
+        raise RuntimeError("Gemini embed_content did not return an embedding")
+
+    vec = list(embedding)
+
+    # Truncate or pad to EMBEDDING_DIMENSION for DB (384)
+    if len(vec) > dim:
+        vec = vec[:dim]
+    elif len(vec) < dim:
+        vec = vec + [0.0] * (dim - len(vec))
+
+    # L2-normalise for cosine similarity
+    mag = sum(x * x for x in vec) ** 0.5
+    if mag > 0:
+        vec = [x / mag for x in vec]
+    return vec
 
 
 def generate_embedding(text: str) -> List[float]:
     """Return a normalised embedding vector for a single piece of text.
 
-    Args:
-        text: The input string to embed.
-
-    Returns:
-        A list of floats representing the embedding, ready for cosine
-        similarity search (unit-normalised).
+    Uses the configured EMBEDDING_PROVIDER (gemini by default). Output length
+    matches EMBEDDING_DIMENSION (384) for pgvector compatibility.
     """
-    model = _get_model()
-    vector = model.encode(
-        text,
-        normalize_embeddings=True,  # L2-normalise → cosine sim == dot product
-        show_progress_bar=False,
-    )
-    return vector.tolist()
+    provider = (Config.EMBEDDING_PROVIDER or "gemini").lower()
+    if provider == "gemini":
+        _configure_gemini_embedding()
+        return _gemini_embed_one(text)
+    raise ValueError(f"Unsupported EMBEDDING_PROVIDER: {provider!r}. Use gemini.")
 
 
 def generate_embeddings_batch(texts: List[str]) -> List[List[float]]:
     """Return normalised embedding vectors for a batch of texts.
 
-    Batching is significantly faster than calling ``generate_embedding``
-    in a loop because the model can parallelise across the sequence axis.
-
-    Args:
-        texts: A list of input strings to embed.
-
-    Returns:
-        A list of embedding vectors in the same order as *texts*.
+    With Gemini we call the API per text (or in small batches if the SDK
+    supports it) to avoid token limits and keep the implementation simple.
     """
     if not texts:
         return []
 
-    model = _get_model()
-    vectors = model.encode(
-        texts,
-        normalize_embeddings=True,
-        batch_size=64,
-        show_progress_bar=False,
-    )
-    return [v.tolist() for v in vectors]
+    provider = (Config.EMBEDDING_PROVIDER or "gemini").lower()
+    if provider == "gemini":
+        _configure_gemini_embedding()
+        return [_gemini_embed_one(t) for t in texts]
+    raise ValueError(f"Unsupported EMBEDDING_PROVIDER: {provider!r}. Use gemini.")

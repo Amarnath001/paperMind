@@ -11,9 +11,8 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
-RUN chmod +x start.sh
 
 ENV PYTHONPATH=/app
 EXPOSE 5000
 
-CMD ["bash", "start.sh"]
+CMD ["python", "run.py"]

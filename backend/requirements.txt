@@ -8,16 +8,8 @@ bcrypt==5.0.0
 PyJWT==2.11.0
 pypdf==6.7.5
 
-# Embeddings
-numpy<2.0.0
-sentence-transformers==3.0.1
-torch==2.2.2
-
-# LLMs
+# LLMs and embeddings (Gemini API; no local ML)
 google-generativeai==0.8.5
-
-# Clustering / analysis
-scikit-learn==1.8.0
 
 # Storage / AWS-compatible clients
 boto3==1.35.49

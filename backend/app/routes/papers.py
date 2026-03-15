@@ -14,9 +14,10 @@ from app.services.storage_service import (
     save_paper_file,
     delete_paper_file,
 )
+from app.config import Config
 from app.services.job_service import create_job
+from app.services.processing import run_full_pipeline_sync
 from app.services.vector_service import search_similar_papers
-from app.tasks.ingestion_tasks import ingest_paper_task
 
 papers_bp = Blueprint("papers", __name__)
 
@@ -114,21 +115,33 @@ def upload_paper():
         "created_at": row[6].isoformat(),
     }
 
-    # Create ingestion job and dispatch Celery task asynchronously
-    job = create_job(
-        workspace_id=ws_uuid,
-        paper_id=paper_id,
-        job_type="ingestion",
-        status="queued",
-        progress=0,
-    )
-    ingest_paper_task.delay(
-        str(job["id"]),
-        str(paper_id),
-        str(ws_uuid),
-        paper["file_path"],
-    )
+    if Config.ASYNC_PROCESSING:
+        from app.tasks.ingestion_tasks import ingest_paper_task
 
+        job = create_job(
+            workspace_id=ws_uuid,
+            paper_id=paper_id,
+            job_type="ingestion",
+            status="queued",
+            progress=0,
+        )
+        ingest_paper_task.delay(
+            str(job["id"]),
+            str(paper_id),
+            str(ws_uuid),
+            paper["file_path"],
+        )
+        return jsonify({"paper": paper, "job": {**job, "id": str(job["id"])}}), 201
+
+    # Synchronous processing: run full pipeline inline (no Celery worker)
+    try:
+        result = run_full_pipeline_sync(paper_id, ws_uuid, paper["file_path"])
+    except Exception as exc:
+        # Paper status already set to failed by processing on error
+        return jsonify({"error": str(exc)}), 500
+
+    paper["status"] = "ready"
+    job = result["job"]
     return jsonify({"paper": paper, "job": {**job, "id": str(job["id"])}}), 201
 
 

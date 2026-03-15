@@ -6,7 +6,6 @@ from uuid import UUID
 from app.config import Config
 from app.services.embedding_service import generate_embedding
 from app.services.vector_service import search_similar_chunks
-from app.services.reranking_service import rerank_chunks
 
 
 def retrieve_context_for_question(
@@ -46,11 +45,12 @@ def retrieve_context_for_question(
     if not candidates:
         return []
 
-    # 3) Optional local reranking
+    # 3) Optional local reranking (skip in lightweight deploy; no cross-encoder)
     if Config.ENABLE_RERANKING:
+        from app.services.reranking_service import rerank_chunks
+
         reranked = rerank_chunks(question, candidates, top_k=final_limit)
         return reranked
 
-    # Fallback: use the initial candidates (respect final_limit)
     return candidates[:final_limit]
 

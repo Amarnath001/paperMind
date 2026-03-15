@@ -48,9 +48,26 @@ class Config:
         os.environ.get("REDIS_URL", "redis://localhost:6379/0")
     )
 
-    # Embeddings (local)
-    EMBEDDING_MODEL = os.environ.get("EMBEDDING_MODEL", "BAAI/bge-small-en-v1.5")
+    # Embeddings (gemini for lightweight deploy; local sentence-transformers optional)
+    EMBEDDING_PROVIDER = os.environ.get("EMBEDDING_PROVIDER", "gemini")
+    EMBEDDING_MODEL = os.environ.get(
+        "EMBEDDING_MODEL", "models/text-embedding-004"
+    )
     EMBEDDING_DIMENSION = int(os.environ.get("EMBEDDING_DIMENSION", "384"))
+
+    # Lightweight deployment (Railway/Vercel/Render): no worker, no local ML
+    LIGHTWEIGHT_DEPLOYMENT = os.environ.get("LIGHTWEIGHT_DEPLOYMENT", "true").lower() in {
+        "1", "true", "yes",
+    }
+    ASYNC_PROCESSING = os.environ.get("ASYNC_PROCESSING", "false").lower() in {
+        "1", "true", "yes",
+    }
+    ENABLE_LOCAL_RERANKING = os.environ.get("ENABLE_LOCAL_RERANKING", "false").lower() in {
+        "1", "true", "yes",
+    }
+    ENABLE_CLUSTERING = os.environ.get("ENABLE_CLUSTERING", "false").lower() in {
+        "1", "true", "yes",
+    }
 
     # LLMs
     LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "gemini")
@@ -67,14 +84,12 @@ class Config:
     S3_SECRET_ACCESS_KEY = os.environ.get("S3_SECRET_ACCESS_KEY", "")
     S3_ENDPOINT_URL = os.environ.get("S3_ENDPOINT_URL", "")
 
-    # Retrieval / reranking
+    # Retrieval / reranking (local cross-encoder; disabled in lightweight mode)
     RERANKER_MODEL = os.environ.get(
         "RERANKER_MODEL", "cross-encoder/ms-marco-MiniLM-L-6-v2"
     )
-    ENABLE_RERANKING = os.environ.get("ENABLE_RERANKING", "true").lower() in {
-        "1",
-        "true",
-        "yes",
+    ENABLE_RERANKING = os.environ.get("ENABLE_RERANKING", "false").lower() in {
+        "1", "true", "yes",
     }
     INITIAL_RETRIEVAL_LIMIT = int(os.environ.get("INITIAL_RETRIEVAL_LIMIT", "20"))
     FINAL_CONTEXT_LIMIT = int(os.environ.get("FINAL_CONTEXT_LIMIT", "5"))

@@ -263,6 +263,17 @@ In production you will typically run:
 
 Local development remains unchanged: `docker compose up --build` starts Postgres, Redis, backend API, Celery worker, and frontend, all using local filesystem storage by default.
 
+### Lightweight cloud deployment (Railway / Vercel / Render)
+
+For low-cost or free-tier hosting (e.g. Railway, Render) where a separate Celery worker is not available, the backend supports a **single-process, synchronous** mode:
+
+- **Embeddings**: Use the **Gemini API** for embeddings (`EMBEDDING_PROVIDER=gemini`, default). No local ML stack (torch, sentence-transformers) is required; the image stays small.
+- **Processing**: Set `ASYNC_PROCESSING=false` (default in production-safe config). After upload, the full pipeline (ingest → chunk → embed → analyze) runs **inline** in the request. No Redis or Celery worker is required.
+- **Reranking**: Local cross-encoder reranking is off by default (`ENABLE_RERANKING=false` / `ENABLE_LOCAL_RERANKING=false`). Retrieval uses pgvector results directly.
+- **Clustering**: Set `ENABLE_CLUSTERING=false` (default) to avoid scikit-learn; the insights page still works with summaries, topics, and recent papers. `cluster_id` may be null.
+
+Required env for this mode: `GEMINI_API_KEY`, your database and (if needed) storage URLs. The backend binds to `PORT` and listens on `0.0.0.0` for platform detection.
+
 ## License
 
 Private

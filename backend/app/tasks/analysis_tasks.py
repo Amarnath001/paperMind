@@ -4,9 +4,9 @@ import logging
 from typing import Any, Dict, List
 from uuid import UUID
 
+from app.config import Config
 from app.celery_app import celery
 from app.db import get_db
-from app.services.clustering_service import cluster_workspace_papers
 from app.services.job_service import (
     get_chunks_for_paper,
     mark_job_failed,
@@ -67,15 +67,18 @@ def analyze_paper_task(
 
         update_job_status(job_uuid, status="running", progress=70)
 
-        # 5. Optionally run workspace-level clustering
-        try:
-            cluster_workspace_papers(workspace_uuid)
-        except Exception as cluster_exc:  # noqa: BLE001
-            logger.warning(
-                "Clustering failed for workspace %s: %s",
-                workspace_id,
-                cluster_exc,
-            )
+        # 5. Optionally run workspace-level clustering (disabled in lightweight deploy)
+        if Config.ENABLE_CLUSTERING:
+            try:
+                from app.services.clustering_service import cluster_workspace_papers
+
+                cluster_workspace_papers(workspace_uuid)
+            except Exception as cluster_exc:  # noqa: BLE001
+                logger.warning(
+                    "Clustering failed for workspace %s: %s",
+                    workspace_id,
+                    cluster_exc,
+                )
 
         update_job_status(job_uuid, status="completed", progress=100)
 
