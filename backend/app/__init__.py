@@ -124,7 +124,7 @@ def create_app(config_class: type = Config) -> Flask:
         logger.exception("Unhandled exception: %s", exc)
         return jsonify({"error": "internal_server_error"}), 500
 
-    # Register blueprints (optionally under API_PREFIX so /api/auth/signup works)
+    # Register blueprints
     from app.routes.health import health_bp
     from app.routes.auth import auth_bp
     from app.routes.workspaces import workspaces_bp
@@ -134,15 +134,14 @@ def create_app(config_class: type = Config) -> Flask:
     from app.routes.chat import chat_bp
     from app.routes.insights import insights_bp
 
-    prefix = app.config.get("API_PREFIX") or ""
-    app.register_blueprint(health_bp, url_prefix=prefix)
-    app.register_blueprint(auth_bp, url_prefix=f"{prefix}/auth")
-    app.register_blueprint(workspaces_bp, url_prefix=f"{prefix}/workspaces")
-    app.register_blueprint(papers_bp, url_prefix=f"{prefix}/papers")
-    app.register_blueprint(jobs_bp, url_prefix=f"{prefix}/jobs")
-    app.register_blueprint(search_bp, url_prefix=f"{prefix}/search")
-    app.register_blueprint(chat_bp, url_prefix=f"{prefix}/chat")
-    app.register_blueprint(insights_bp, url_prefix=f"{prefix}/insights")
+    app.register_blueprint(health_bp, url_prefix="")
+    app.register_blueprint(auth_bp, url_prefix="/auth")
+    app.register_blueprint(workspaces_bp, url_prefix="/workspaces")
+    app.register_blueprint(papers_bp, url_prefix="/papers")
+    app.register_blueprint(jobs_bp, url_prefix="/jobs")
+    app.register_blueprint(search_bp, url_prefix="/search")
+    app.register_blueprint(chat_bp, url_prefix="/chat")
+    app.register_blueprint(insights_bp, url_prefix="/insights")
 
     # Explicit OPTIONS routes so preflight always gets 200 + CORS (Railway/proxy-safe)
     @app.route("/", methods=["OPTIONS"])

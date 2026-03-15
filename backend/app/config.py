@@ -27,8 +27,6 @@ class Config:
 
     # Flask
     SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret-key-change-in-production")
-    # Optional path prefix (e.g. "/api") if frontend uses ...railway.app/api as base URL
-    API_PREFIX = (os.environ.get("API_PREFIX") or "").strip().rstrip("/") or ""
 
     # CORS: allowed origins for browser requests (Vercel frontend + local dev)
     CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "https://paper-mind-six.vercel.app,http://localhost:3000").strip().split(",")
