@@ -63,6 +63,7 @@ def create_app(config_class: type = Config) -> Flask:
         "https://paper-mind-pla.vercel.app",
         "https://paper-mind.vercel.app",
         "http://localhost:3000",
+        "https://paper-mind-4cmefjgkz-amarnath001s-projects.vercel.app",
     ]
     if _raw is None or (isinstance(_raw, (list, tuple)) and len(_raw) == 0):
         origins = _default_origins
