@@ -144,4 +144,13 @@ def create_app(config_class: type = Config) -> Flask:
     app.register_blueprint(chat_bp, url_prefix=f"{prefix}/chat")
     app.register_blueprint(insights_bp, url_prefix=f"{prefix}/insights")
 
+    # Explicit OPTIONS routes so preflight always gets 200 + CORS (Railway/proxy-safe)
+    @app.route("/", methods=["OPTIONS"])
+    def _options_root():
+        return "", 200
+
+    @app.route("/<path:path>", methods=["OPTIONS"])
+    def _options_catchall(path: str):
+        return "", 200
+
     return app
