@@ -59,6 +59,8 @@ def create_app(config_class: type = Config) -> Flask:
     # CORS: explicit origins for Vercel frontend + local dev; supports credentials (e.g. Authorization header)
     origins = app.config.get("CORS_ORIGINS") or [
         "https://paper-mind-six.vercel.app",
+        "https://paper-mind-pla.vercel.app",
+        "https://paper-mind.vercel.app",
         "http://localhost:3000",
     ]
     CORS(
