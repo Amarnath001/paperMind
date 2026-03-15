@@ -5,8 +5,9 @@ import os
 import time
 from typing import Any
 
-from flask import Flask, Request, Response, g, request
+from flask import Flask, Response, g, jsonify, request
 from flask_cors import CORS
+from werkzeug.exceptions import HTTPException
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
@@ -90,11 +91,17 @@ def create_app(config_class: type = Config) -> Flask:
             logger.exception("Failed to log request")
         return response
 
+    @app.errorhandler(HTTPException)
+    def _handle_http_exception(exc: HTTPException):  # type: ignore[override]
+        """Return proper status code for Flask/Werkzeug HTTP exceptions (e.g. 404)."""
+        return jsonify(
+            {"error": exc.name or "error", "message": exc.description or ""}
+        ), exc.code
+
     @app.errorhandler(Exception)
     def _handle_uncaught_error(exc: Exception):  # type: ignore[override]
+        """Log and return 500 only for unexpected exceptions."""
         logger.exception("Unhandled exception: %s", exc)
-        from flask import jsonify
-
         return jsonify({"error": "internal_server_error"}), 500
 
     # Register blueprints
