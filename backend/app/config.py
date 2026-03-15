@@ -2,12 +2,24 @@
 
 import os
 from pathlib import Path
+from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 from dotenv import load_dotenv
 
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+def _normalize_redis_url(url: str) -> str:
+    """Add ssl_cert_reqs=none to rediss:// URLs for redis-py (Flask-Limiter, health). Celery needs CERT_NONE and is handled in celery_app."""
+    if not url.startswith("rediss://"):
+        return url
+    parsed = urlparse(url)
+    qs = dict(parse_qsl(parsed.query))
+    if "ssl_cert_reqs" not in qs:
+        qs["ssl_cert_reqs"] = "none"  # redis-py expects lowercase "none"
+    return urlunparse(parsed._replace(query=urlencode(qs)))
 
 
 class Config:
@@ -31,8 +43,10 @@ class Config:
         "postgresql://postgres:postgres@localhost:5432/papermind",
     )
 
-    # Redis
-    REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+    # Redis (rediss:// URLs normalized with ssl_cert_reqs for Celery/redis clients)
+    REDIS_URL = _normalize_redis_url(
+        os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+    )
 
     # Embeddings (local)
     EMBEDDING_MODEL = os.environ.get("EMBEDDING_MODEL", "BAAI/bge-small-en-v1.5")
@@ -43,10 +57,12 @@ class Config:
     GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
     GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-1.5-flash")
 
-    # Storage
+    # Storage (for Cloudflare R2 set STORAGE_PROVIDER=s3 and S3_REGION=auto)
     STORAGE_PROVIDER = os.environ.get("STORAGE_PROVIDER", "local")  # local | s3
     S3_BUCKET_NAME = os.environ.get("S3_BUCKET_NAME", "")
-    S3_REGION = os.environ.get("S3_REGION", "")
+    S3_REGION = os.environ.get("S3_REGION") or (
+        "auto" if os.environ.get("S3_ENDPOINT_URL") else ""
+    )
     S3_ACCESS_KEY_ID = os.environ.get("S3_ACCESS_KEY_ID", "")
     S3_SECRET_ACCESS_KEY = os.environ.get("S3_SECRET_ACCESS_KEY", "")
     S3_ENDPOINT_URL = os.environ.get("S3_ENDPOINT_URL", "")

@@ -39,6 +39,19 @@ def create_app(config_class: type = Config) -> Flask:
     app = Flask(__name__)
     app.config.from_object(config_class)
 
+    # Log storage config at startup
+    provider = (app.config.get("STORAGE_PROVIDER") or "local").lower()
+    if provider == "s3":
+        bucket = app.config.get("S3_BUCKET_NAME") or ""
+        endpoint = (app.config.get("S3_ENDPOINT_URL") or "")[:50]
+        logger.info(
+            "storage provider=s3 bucket=%s endpoint=%s...",
+            bucket or "(not set)",
+            endpoint or "(default)",
+        )
+    else:
+        logger.info("storage provider=local folder=%s", app.config.get("UPLOAD_FOLDER"))
+
     # Ensure upload directory exists for local storage
     os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 

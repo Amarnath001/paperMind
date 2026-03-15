@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 from pathlib import Path
 from tempfile import NamedTemporaryFile
@@ -10,6 +11,8 @@ from botocore.client import Config as BotoConfig
 from werkzeug.datastructures import FileStorage
 
 from app.config import Config
+
+logger = logging.getLogger("papermind")
 
 
 ALLOWED_EXTENSIONS = {"pdf"}
@@ -32,19 +35,14 @@ def _workspace_object_key(workspace_id: str, filename: str) -> str:
 
 
 def _get_s3_client():
-    cfg = {
-        "S3_REGION": Config.S3_REGION,
-        "S3_ACCESS_KEY_ID": Config.S3_ACCESS_KEY_ID,
-        "S3_SECRET_ACCESS_KEY": Config.S3_SECRET_ACCESS_KEY,
-        "S3_ENDPOINT_URL": Config.S3_ENDPOINT_URL,
-    }
-    session = boto3.session.Session()
-    client = session.client(
+    """Build S3 client (works with Cloudflare R2 when S3_ENDPOINT_URL is set)."""
+    region = Config.S3_REGION or "auto"
+    client = boto3.client(
         "s3",
-        region_name=cfg.get("S3_REGION") or None,
-        aws_access_key_id=cfg.get("S3_ACCESS_KEY_ID") or None,
-        aws_secret_access_key=cfg.get("S3_SECRET_ACCESS_KEY") or None,
-        endpoint_url=cfg.get("S3_ENDPOINT_URL") or None,
+        region_name=region,
+        aws_access_key_id=Config.S3_ACCESS_KEY_ID or None,
+        aws_secret_access_key=Config.S3_SECRET_ACCESS_KEY or None,
+        endpoint_url=Config.S3_ENDPOINT_URL or None,
         config=BotoConfig(s3={"addressing_style": "virtual"}),
     )
     return client
@@ -67,9 +65,14 @@ def save_paper_file(file: FileStorage, workspace_id: str) -> Tuple[str, str]:
         bucket = Config.S3_BUCKET_NAME
         if not bucket:
             raise RuntimeError("S3_BUCKET_NAME must be set when STORAGE_PROVIDER='s3'")
-        # Upload file stream directly
+        logger.info("Uploading to S3 bucket=%s key=%s", bucket, object_key)
         file.stream.seek(0)
-        client.upload_fileobj(file.stream, bucket, object_key)
+        try:
+            client.upload_fileobj(file.stream, bucket, object_key)
+            logger.info("Uploaded to S3 successfully key=%s", object_key)
+        except Exception as e:
+            logger.exception("S3 upload failed bucket=%s key=%s: %s", bucket, object_key, e)
+            raise
         return filename, object_key
 
     # Default: local filesystem storage

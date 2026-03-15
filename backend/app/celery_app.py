@@ -1,13 +1,20 @@
 from __future__ import annotations
 
-import os
-
 from celery import Celery
+
+from app.config import Config
+
+
+def _celery_redis_url(url: str) -> str:
+    """Kombu/Celery require ssl_cert_reqs=CERT_NONE (not 'none'); redis-py uses 'none'."""
+    if "rediss://" in url and "ssl_cert_reqs=none" in url:
+        return url.replace("ssl_cert_reqs=none", "ssl_cert_reqs=CERT_NONE")
+    return url
 
 
 def make_celery() -> Celery:
     """Create and configure Celery application."""
-    redis_url = os.environ.get("REDIS_URL", "redis://redis:6379/0")
+    redis_url = _celery_redis_url(Config.REDIS_URL)
 
     celery = Celery(
         "papermind",
