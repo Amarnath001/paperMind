@@ -63,7 +63,7 @@ def create_app(config_class: type = Config) -> Flask:
     ]
     CORS(
         app,
-        origins=origins,
+        resources={r"/*": {"origins": origins}},
         supports_credentials=True,
         allow_headers=["Content-Type", "Authorization"],
         methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
@@ -124,7 +124,7 @@ def create_app(config_class: type = Config) -> Flask:
         logger.exception("Unhandled exception: %s", exc)
         return jsonify({"error": "internal_server_error"}), 500
 
-    # Register blueprints
+    # Register blueprints (optionally under API_PREFIX so /api/auth/signup works)
     from app.routes.health import health_bp
     from app.routes.auth import auth_bp
     from app.routes.workspaces import workspaces_bp
@@ -134,13 +134,14 @@ def create_app(config_class: type = Config) -> Flask:
     from app.routes.chat import chat_bp
     from app.routes.insights import insights_bp
 
-    app.register_blueprint(health_bp, url_prefix="")
-    app.register_blueprint(auth_bp, url_prefix="/auth")
-    app.register_blueprint(workspaces_bp, url_prefix="/workspaces")
-    app.register_blueprint(papers_bp, url_prefix="/papers")
-    app.register_blueprint(jobs_bp, url_prefix="/jobs")
-    app.register_blueprint(search_bp, url_prefix="/search")
-    app.register_blueprint(chat_bp, url_prefix="/chat")
-    app.register_blueprint(insights_bp, url_prefix="/insights")
+    prefix = app.config.get("API_PREFIX") or ""
+    app.register_blueprint(health_bp, url_prefix=prefix)
+    app.register_blueprint(auth_bp, url_prefix=f"{prefix}/auth")
+    app.register_blueprint(workspaces_bp, url_prefix=f"{prefix}/workspaces")
+    app.register_blueprint(papers_bp, url_prefix=f"{prefix}/papers")
+    app.register_blueprint(jobs_bp, url_prefix=f"{prefix}/jobs")
+    app.register_blueprint(search_bp, url_prefix=f"{prefix}/search")
+    app.register_blueprint(chat_bp, url_prefix=f"{prefix}/chat")
+    app.register_blueprint(insights_bp, url_prefix=f"{prefix}/insights")
 
     return app
