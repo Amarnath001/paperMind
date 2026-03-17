@@ -1,14 +1,18 @@
-import { ReactNode } from "react";
+import { ComponentPropsWithoutRef, ReactNode } from "react";
 
 export function Card({
   children,
   className = "",
+  ...props
 }: {
   readonly children: ReactNode;
   readonly className?: string;
-}) {
+} & Omit<ComponentPropsWithoutRef<"section">, "children" | "className">) {
   return (
-    <section className={["ui-card", className].filter(Boolean).join(" ")}>
+    <section
+      className={["ui-card", className].filter(Boolean).join(" ")}
+      {...props}
+    >
       {children}
     </section>
   );
