@@ -4,6 +4,9 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { apiFetch, setToken } from "@/src/lib/api";
+import { Card, CardBody, CardHeader } from "@/src/components/ui/Card";
+import { Button } from "@/src/components/ui/Button";
+import { Input } from "@/src/components/ui/Input";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -32,36 +35,45 @@ export default function SignupPage() {
 
   return (
     <main className="auth-layout">
-      <section className="auth-card">
-        <h1>Create your PaperMind account</h1>
-        <form onSubmit={handleSubmit} className="auth-form">
-          <label>
-            Email
-            <input
+      <Card className="auth-card">
+        <CardHeader
+          title="Create your account"
+          subtitle="Start building a research library in minutes."
+        />
+        <CardBody>
+          <form onSubmit={handleSubmit} className="auth-form">
+            <Input
+              label="Email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              autoComplete="email"
+              placeholder="you@company.com"
             />
-          </label>
-          <label>
-            Password
-            <input
+            <Input
+              label="Password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              autoComplete="new-password"
+              placeholder="Create a password"
+              hint="Use a strong password you don’t reuse elsewhere."
             />
-          </label>
-          {error && <p className="auth-error">{error}</p>}
-          <button type="submit" disabled={loading}>
-            {loading ? "Signing up..." : "Sign up"}
-          </button>
-        </form>
-        <p className="auth-footer">
-          Already have an account? <a href="/login">Log in</a>
-        </p>
-      </section>
+
+            {error ? <div className="ui-error">{error}</div> : null}
+
+            <Button type="submit" fullWidth disabled={loading}>
+              {loading ? "Creating account…" : "Create account"}
+            </Button>
+          </form>
+
+          <div className="auth-footer">
+            Already have an account? <a href="/login">Log in</a>
+          </div>
+        </CardBody>
+      </Card>
     </main>
   );
 }

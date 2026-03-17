@@ -4,6 +4,9 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { apiFetch, setToken } from "@/src/lib/api";
+import { Card, CardBody, CardHeader } from "@/src/components/ui/Card";
+import { Button } from "@/src/components/ui/Button";
+import { Input } from "@/src/components/ui/Input";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -32,36 +35,44 @@ export default function LoginPage() {
 
   return (
     <main className="auth-layout">
-      <section className="auth-card">
-        <h1>Log in to PaperMind</h1>
-        <form onSubmit={handleSubmit} className="auth-form">
-          <label>
-            Email
-            <input
+      <Card className="auth-card">
+        <CardHeader
+          title="Welcome back"
+          subtitle="Log in to continue to your workspaces."
+        />
+        <CardBody>
+          <form onSubmit={handleSubmit} className="auth-form">
+            <Input
+              label="Email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              autoComplete="email"
+              placeholder="you@company.com"
             />
-          </label>
-          <label>
-            Password
-            <input
+            <Input
+              label="Password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              autoComplete="current-password"
+              placeholder="••••••••"
             />
-          </label>
-          {error && <p className="auth-error">{error}</p>}
-          <button type="submit" disabled={loading}>
-            {loading ? "Logging in..." : "Log in"}
-          </button>
-        </form>
-        <p className="auth-footer">
-          Need an account? <a href="/signup">Sign up</a>
-        </p>
-      </section>
+
+            {error ? <div className="ui-error">{error}</div> : null}
+
+            <Button type="submit" fullWidth disabled={loading}>
+              {loading ? "Logging in…" : "Log in"}
+            </Button>
+          </form>
+
+          <div className="auth-footer">
+            Need an account? <a href="/signup">Sign up</a>
+          </div>
+        </CardBody>
+      </Card>
     </main>
   );
 }

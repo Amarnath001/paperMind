@@ -11,6 +11,12 @@ import {
   searchChunks,
   SearchResult,
 } from "@/src/lib/api";
+import { ContentContainer, PageHeader } from "@/src/components/layout/Page";
+import { Badge } from "@/src/components/ui/Badge";
+import { Button } from "@/src/components/ui/Button";
+import { Card, CardBody, CardHeader } from "@/src/components/ui/Card";
+import { EmptyState } from "@/src/components/ui/EmptyState";
+import { Input } from "@/src/components/ui/Input";
 
 interface Workspace {
   id: string;
@@ -25,6 +31,19 @@ interface Paper {
   filename: string;
   status: string;
   created_at: string;
+}
+
+function statusTone(status: string) {
+  switch (status) {
+    case "ready":
+      return "success";
+    case "processing":
+      return "warning";
+    case "failed":
+      return "danger";
+    default:
+      return "neutral";
+  }
 }
 
 export default function WorkspacePage() {
@@ -125,121 +144,166 @@ export default function WorkspacePage() {
   }
 
   return (
-    <div className="page-layout">
-      <header className="page-header">
-        <div>
-          <h1>{workspace?.name ?? "Workspace"}</h1>
-          <p>Library of uploaded papers.</p>
-        </div>
-        <nav>
-          <a href="/dashboard">Back to dashboard</a>
-          <a href={`/workspace/${workspaceId}/insights`}>Insights</a>
-          <a href={`/workspace/${workspaceId}/chat`}>Chat</a>
-          <a href={`/upload?workspace_id=${workspaceId}`}>Upload paper</a>
-        </nav>
-      </header>
+    <ContentContainer>
+      <PageHeader
+        title={workspace?.name ?? "Workspace"}
+        subtitle="Your library of papers, chat, and insights."
+        actions={
+          <>
+            <Button variant="secondary" onClick={() => router.push("/dashboard")}>
+              Back
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => router.push(`/workspace/${workspaceId}/chat`)}
+            >
+              Open chat
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => router.push(`/workspace/${workspaceId}/insights`)}
+            >
+              Insights
+            </Button>
+            <Button onClick={() => router.push(`/upload?workspace_id=${workspaceId}`)}>
+              Upload
+            </Button>
+          </>
+        }
+      />
 
-      {error && <p className="auth-error">{error}</p>}
+      {error ? <div className="ui-error" style={{ marginBottom: "0.75rem" }}>{error}</div> : null}
 
-      <section className="card">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-          <h2>{searchResults ? "Search Results" : "Papers"}</h2>
-          <form onSubmit={handleSearch} style={{ display: "flex", gap: "0.5rem" }}>
-            <input
-              type="text"
-              placeholder="Ask a question..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              disabled={isSearching}
-            />
-            <button type="submit" disabled={isSearching || !searchQuery.trim()}>
-              {isSearching ? "Searching..." : "Search"}
-            </button>
-            {searchResults && (
-              <button
-                type="button"
-                onClick={() => { setSearchResults(null); setSearchQuery(""); }}
-                style={{ background: "#4B5563" }}
+      <Card>
+        <CardHeader
+          title={searchResults ? "Search results" : "Papers"}
+          subtitle={
+            searchResults
+              ? "Relevant excerpts from your library."
+              : "All papers in this workspace."
+          }
+          right={
+            <form onSubmit={handleSearch} className="ui-inline-form">
+              <div className="ui-inline-form__field">
+                <Input
+                  aria-label="Search"
+                  placeholder="Ask a question…"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  disabled={isSearching}
+                />
+              </div>
+              <Button
+                size="sm"
+                type="submit"
+                disabled={isSearching || !searchQuery.trim()}
               >
-                Clear
-              </button>
-            )}
-          </form>
-        </div>
-
-        {searchResults ? (
-          searchResults.length === 0 ? (
-            <p>No relevant excerpts found.</p>
-          ) : (
-            <ul className="paper-list">
-              {searchResults.map((res) => (
-                <li key={res.chunk_id}>
-                  <div>
-                    <strong>{res.paper_title}</strong>
-                    <div className="paper-meta" style={{ marginBottom: "0.5rem" }}>
-                      Chunk {res.chunk_index} · Similarity: {(res.similarity * 100).toFixed(1)}%
-                    </div>
-                    <p style={{ margin: 0, fontSize: "0.9rem", color: "#4B5563" }}>
-                      {res.text.length > 300 ? res.text.slice(0, 300) + "..." : res.text}
-                    </p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )
-        ) : papers.length === 0 ? (
-          <p>No papers uploaded yet.</p>
-        ) : (
-          <ul className="paper-list">
-            {papers.map((p) => (
-              <li
-                key={p.id}
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "flex-start",
-                  gap: "0.75rem",
-                }}
-              >
-                <div>
-                  <strong>{p.title}</strong>
-                  <div className="paper-meta">
-                    {p.filename} ·{" "}
-                    <span className={`status-badge status-${p.status}`}>
-                      {p.status}
-                      {p.status === "processing" &&
-                        (() => {
-                          const jobs = jobsByPaper[p.id] || [];
-                          const job = jobs[0];
-                          if (!job) return null;
-                          return ` · ${job.progress}%`;
-                        })()}
-                    </span>{" "}
-                    · {new Date(p.created_at).toLocaleString()}
-                  </div>
-                </div>
-                <button
+                {isSearching ? "Searching…" : "Search"}
+              </Button>
+              {searchResults ? (
+                <Button
+                  size="sm"
                   type="button"
-                  onClick={() => handleDeletePaper(p.id)}
-                  style={{
-                    borderRadius: "999px",
-                    border: "1px solid #F97373",
-                    padding: "0.25rem 0.75rem",
-                    fontSize: "0.8rem",
-                    color: "#B91C1C",
-                    background: "#FEF2F2",
-                    cursor: "pointer",
-                    whiteSpace: "nowrap",
+                  variant="ghost"
+                  onClick={() => {
+                    setSearchResults(null);
+                    setSearchQuery("");
                   }}
                 >
-                  Delete
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-    </div>
+                  Clear
+                </Button>
+              ) : null}
+            </form>
+          }
+        />
+        <CardBody>
+          {(() => {
+            if (searchResults) {
+              if (searchResults.length === 0) {
+                return (
+                  <EmptyState
+                    title="No matches"
+                    description="Try a broader question or upload more papers."
+                  />
+                );
+              }
+              return (
+                <ul className="ui-list">
+                  {searchResults.map((res) => (
+                    <li key={res.chunk_id} className="ui-list-row">
+                      <div style={{ fontWeight: 650 }}>{res.paper_title}</div>
+                      <div className="ui-muted">
+                        Chunk {res.chunk_index} · Similarity{" "}
+                        {(res.similarity * 100).toFixed(1)}%
+                      </div>
+                      <div className="ui-muted" style={{ marginTop: "0.35rem" }}>
+                        {res.text.length > 320
+                          ? res.text.slice(0, 320) + "…"
+                          : res.text}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              );
+            }
+
+            if (papers.length === 0) {
+              return (
+                <EmptyState
+                  title="No papers yet"
+                  description="Upload a PDF to start chat, search, and insights."
+                  action={
+                    <Button
+                      onClick={() =>
+                        router.push(`/upload?workspace_id=${workspaceId}`)
+                      }
+                    >
+                      Upload first paper
+                    </Button>
+                  }
+                />
+              );
+            }
+
+            return (
+              <ul className="ui-list">
+                {papers.map((p) => {
+                  const jobs = jobsByPaper[p.id] || [];
+                  const job = jobs[0];
+                  const progress =
+                    p.status === "processing" && job ? ` · ${job.progress}%` : "";
+
+                  return (
+                    <li key={p.id} className="ui-list-row ui-row-split">
+                      <div>
+                        <div style={{ fontWeight: 650 }}>{p.title}</div>
+                        <div className="ui-muted">
+                          {p.filename} ·{" "}
+                          {new Date(p.created_at).toLocaleString()}
+                        </div>
+                      </div>
+                      <div className="ui-row-split__right">
+                        <Badge tone={statusTone(p.status)}>
+                          {p.status}
+                          {progress}
+                        </Badge>
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          onClick={() => handleDeletePaper(p.id)}
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            );
+          })()}
+        </CardBody>
+      </Card>
+    </ContentContainer>
   );
 }
 

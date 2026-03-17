@@ -4,6 +4,11 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { apiFetch, clearToken } from "@/src/lib/api";
+import { ContentContainer, PageHeader } from "@/src/components/layout/Page";
+import { Button } from "@/src/components/ui/Button";
+import { Card, CardBody, CardHeader } from "@/src/components/ui/Card";
+import { EmptyState } from "@/src/components/ui/EmptyState";
+import { Input } from "@/src/components/ui/Input";
 
 interface Workspace {
   id: string;
@@ -58,52 +63,69 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="page-layout">
-      <header className="page-header">
-        <div>
-          <h1>Workspaces</h1>
-          <p>Your research spaces in PaperMind.</p>
-        </div>
-        <nav>
-          <a href="/upload">Upload paper</a>
-        </nav>
-      </header>
+    <ContentContainer>
+      <PageHeader
+        title="Dashboard"
+        subtitle="Your workspaces and research libraries."
+        actions={
+          <Button variant="secondary" onClick={() => router.push("/upload")}>
+            Upload paper
+          </Button>
+        }
+      />
 
-      <section className="card">
-        <h2>Create a new workspace</h2>
-        <div className="workspace-form">
-          <input
-            type="text"
-            placeholder="Workspace name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
+      <div className="ui-grid-2">
+        <Card>
+          <CardHeader
+            title="Create workspace"
+            subtitle="Keep papers, chat, and insights organized by project."
           />
-          <button onClick={handleCreateWorkspace} disabled={loading}>
-            {loading ? "Creating..." : "Create"}
-          </button>
-        </div>
-        {error && <p className="auth-error">{error}</p>}
-      </section>
+          <CardBody>
+            <div className="ui-stack">
+              <Input
+                label="Workspace name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. LLM research"
+              />
+              {error ? <div className="ui-error">{error}</div> : null}
+              <Button onClick={handleCreateWorkspace} disabled={loading}>
+                {loading ? "Creating…" : "Create workspace"}
+              </Button>
+            </div>
+          </CardBody>
+        </Card>
 
-      <section className="card">
-        <h2>Your workspaces</h2>
-        {workspaces.length === 0 ? (
-          <p>No workspaces yet. Create one to get started.</p>
-        ) : (
-          <ul className="workspace-list">
-            {workspaces.map((ws) => (
-              <li key={ws.id}>
-                <a href={`/workspace/${ws.id}`}>{ws.name}</a>
-                <span className="workspace-meta">
-                  Role: {ws.role} · Created{" "}
-                  {new Date(ws.created_at).toLocaleString()}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-    </div>
+        <Card>
+          <CardHeader title="Your workspaces" subtitle="Jump back in where you left off." />
+          <CardBody>
+            {workspaces.length === 0 ? (
+              <EmptyState
+                title="No workspaces yet"
+                description="Create a workspace to upload papers and start chatting with citations."
+              />
+            ) : (
+              <ul className="ui-list">
+                {workspaces.map((ws) => (
+                  <li key={ws.id} className="ui-list-row">
+                    <button
+                      type="button"
+                      className="ui-linklike"
+                      onClick={() => router.push(`/workspace/${ws.id}`)}
+                    >
+                      {ws.name}
+                    </button>
+                    <div className="ui-muted">
+                      Role: {ws.role} · Created {new Date(ws.created_at).toLocaleString()}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardBody>
+        </Card>
+      </div>
+    </ContentContainer>
   );
 }
 

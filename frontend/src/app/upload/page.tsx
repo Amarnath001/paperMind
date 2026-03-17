@@ -4,6 +4,11 @@ import { FormEvent, useRef, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { API_BASE_URL, getAuthHeader } from "@/src/lib/api";
+import { ContentContainer, PageHeader } from "@/src/components/layout/Page";
+import { Button } from "@/src/components/ui/Button";
+import { Card, CardBody, CardHeader } from "@/src/components/ui/Card";
+import { Input } from "@/src/components/ui/Input";
+import { Badge } from "@/src/components/ui/Badge";
 
 function UploadForm() {
   const searchParams = useSearchParams();
@@ -74,59 +79,91 @@ function UploadForm() {
   }
 
   return (
-    <div className="page-layout">
-      <header className="page-header">
-        <div>
-          <h1>Upload paper</h1>
-          <p>Upload a PDF into one of your workspaces.</p>
-        </div>
-        <nav>
-          <a href="/dashboard">Back to dashboard</a>
-        </nav>
-      </header>
+    <ContentContainer>
+      <PageHeader
+        title="Upload"
+        subtitle="Upload a PDF into a workspace to enable chat, search, and insights."
+        actions={
+          <Button variant="secondary" onClick={() => router.push("/dashboard")}>
+            Back
+          </Button>
+        }
+      />
 
-      <section className="card">
-        <form onSubmit={handleSubmit} className="upload-form">
-          <label>
-            Workspace ID
-            <input
-              type="text"
+      <Card>
+        <CardHeader
+          title="Upload a paper"
+          subtitle={
+            <>
+              PDFs are stored securely and processed to create embeddings for
+              semantic search.
+            </>
+          }
+          right={
+            workspaceId ? (
+              <Badge tone="info">Workspace: {workspaceId}</Badge>
+            ) : (
+              <Badge tone="neutral">Select a workspace</Badge>
+            )
+          }
+        />
+        <CardBody>
+          <form onSubmit={handleSubmit} className="ui-stack">
+            <Input
+              label="Workspace ID"
               value={workspaceId}
               onChange={(e) => setWorkspaceId(e.target.value)}
-              placeholder="Workspace ID"
+              placeholder="Paste workspace id"
               required
             />
-          </label>
-          <label>
-            Title (optional)
-            <input
-              type="text"
+
+            <Input
+              label="Title (optional)"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Paper title"
             />
-          </label>
-          <label>
-            PDF file
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="application/pdf"
-              onChange={(e) => {
-                const selected = e.target.files?.[0] ?? null;
-                setFile(selected);
-              }}
-              required
-            />
-          </label>
-          {error && <p className="auth-error">{error}</p>}
-          {success && <p className="auth-success">{success}</p>}
-          <button type="submit" disabled={loading}>
-            {loading ? "Uploading..." : "Upload"}
-          </button>
-        </form>
-      </section>
-    </div>
+
+            <div className="ui-field">
+              <label className="ui-label" htmlFor="paper-file">
+                PDF file
+              </label>
+              <input
+                id="paper-file"
+                ref={fileInputRef}
+                type="file"
+                accept="application/pdf"
+                onChange={(e) => {
+                  const selected = e.target.files?.[0] ?? null;
+                  setFile(selected);
+                }}
+                required
+              />
+              <div className="ui-hint">
+                Max 20MB. Only PDF files are supported.
+              </div>
+            </div>
+
+            {error ? <div className="ui-error">{error}</div> : null}
+            {success ? <div className="ui-hint">{success}</div> : null}
+
+            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+              <Button type="submit" disabled={loading}>
+                {loading ? "Uploading…" : "Upload"}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => router.push(`/workspace/${workspaceId}`)}
+                disabled={!workspaceId}
+              >
+                Go to workspace
+              </Button>
+            </div>
+          </form>
+        </CardBody>
+      </Card>
+    </ContentContainer>
   );
 }
 

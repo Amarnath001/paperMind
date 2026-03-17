@@ -1,13 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 
 import { getWorkspaceInsights, WorkspaceInsights } from "@/src/lib/api";
+import { ContentContainer, PageHeader } from "@/src/components/layout/Page";
+import { Badge } from "@/src/components/ui/Badge";
+import { Button } from "@/src/components/ui/Button";
+import { Card, CardBody, CardHeader } from "@/src/components/ui/Card";
+import { EmptyState } from "@/src/components/ui/EmptyState";
 
 export default function WorkspaceInsightsPage() {
   const params = useParams<{ id: string }>();
   const workspaceId = params.id;
+  const router = useRouter();
 
   const [insights, setInsights] = useState<WorkspaceInsights | null>(null);
   const [loading, setLoading] = useState(false);
@@ -32,129 +38,137 @@ export default function WorkspaceInsightsPage() {
     }
   }, [workspaceId]);
 
-  return (
-    <div className="page-layout">
-      <header className="page-header">
-        <div>
-          <h1>Workspace insights</h1>
-          <p>High-level view of papers, topics, and clusters.</p>
-        </div>
-        <nav>
-          <a href={`/workspace/${workspaceId}`}>Back to workspace</a>
-        </nav>
-      </header>
+  const overviewCards = insights
+    ? [
+        { label: "Total papers", value: insights.total_papers },
+        { label: "Topics", value: insights.topics.length },
+        { label: "Clusters", value: insights.clusters.length },
+      ]
+    : [];
 
-      {error && <p className="auth-error">{error}</p>}
+  return (
+    <ContentContainer>
+      <PageHeader
+        title="Insights"
+        subtitle="Overview metrics, topics, clusters, and recent papers."
+        actions={
+          <Button
+            variant="secondary"
+            onClick={() => router.push(`/workspace/${workspaceId}`)}
+          >
+            Back
+          </Button>
+        }
+      />
+
+      {error ? <div className="ui-error" style={{ marginBottom: "0.75rem" }}>{error}</div> : null}
 
       {loading || !insights ? (
-        <p>Loading insights...</p>
+        <div className="ui-muted">Loading insights…</div>
       ) : (
         <>
-          <section className="card">
-            <h2>Overview</h2>
-            <p>Total papers: <strong>{insights.total_papers}</strong></p>
-            {insights.topics.length > 0 && (
-              <>
-                <h3 style={{ marginTop: "1rem" }}>Top topics</h3>
-                <ul className="paper-list">
-                  {insights.topics.slice(0, 10).map((t) => (
-                    <li key={t.topic}>
-                      <div>
-                        <strong>{t.topic}</strong>
-                        <span className="paper-meta"> · {t.count} papers</span>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </>
-            )}
-          </section>
-
-          <section className="card">
-            <h2>Clusters</h2>
-            {insights.clusters.length === 0 ? (
-              <p>No clusters available yet. Try uploading and ingesting more papers.</p>
-            ) : (
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "1rem" }}>
-                {insights.clusters.map((cluster) => (
-                  <div
-                    key={cluster.cluster_id}
-                    style={{
-                      flex: "1 1 260px",
-                      borderRadius: "0.75rem",
-                      border: "1px solid #E5E7EB",
-                      padding: "0.75rem",
-                    }}
-                  >
-                    <h3 style={{ fontSize: "0.95rem", marginBottom: "0.5rem" }}>
-                      Cluster {cluster.cluster_id}
-                    </h3>
-                    <ul className="paper-list">
-                      {cluster.papers.map((p) => (
-                        <li key={p.id}>
-                          <div>
-                            <strong>{p.title}</strong>
-                            {p.summary && (
-                              <p
-                                style={{
-                                  margin: "0.25rem 0 0",
-                                  fontSize: "0.85rem",
-                                  color: "#4B5563",
-                                }}
-                              >
-                                {p.summary.length > 200
-                                  ? p.summary.slice(0, 200) + "..."
-                                  : p.summary}
-                              </p>
-                            )}
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
+          <div className="pm-insights-overview">
+            {overviewCards.map((c) => (
+              <Card key={c.label}>
+                <CardBody>
+                  <div className="pm-metric">
+                    <div className="pm-metric__label">{c.label}</div>
+                    <div className="pm-metric__value">{c.value}</div>
                   </div>
-                ))}
-              </div>
-            )}
-          </section>
+                </CardBody>
+              </Card>
+            ))}
+          </div>
 
-          <section className="card">
-            <h2>Recent papers</h2>
-            {insights.recent_papers.length === 0 ? (
-              <p>No papers yet.</p>
-            ) : (
-              <ul className="paper-list">
-                {insights.recent_papers.map((p) => (
-                  <li key={p.id}>
-                    <div>
-                      <strong>{p.title}</strong>
-                      <div className="paper-meta">
-                        {p.cluster_id !== null && p.cluster_id !== undefined
-                          ? `Cluster ${p.cluster_id} · `
-                          : ""}
-                        {new Date(p.created_at).toLocaleString()}
-                      </div>
-                      {p.summary && (
-                        <p
-                          style={{
-                            margin: "0.25rem 0 0",
-                            fontSize: "0.9rem",
-                            color: "#4B5563",
-                          }}
-                        >
-                          {p.summary.length > 260
-                            ? p.summary.slice(0, 260) + "..."
-                            : p.summary}
-                        </p>
-                      )}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
+          <div className="pm-insights-grid">
+            <Card>
+              <CardHeader title="Top topics" subtitle="Most frequent topics across papers." />
+              <CardBody>
+                {insights.topics.length === 0 ? (
+                  <EmptyState
+                    title="No topics yet"
+                    description="Upload and process papers to extract topics."
+                  />
+                ) : (
+                  <div className="pm-chip-row">
+                    {insights.topics.slice(0, 16).map((t) => (
+                      <Badge key={t.topic} tone="neutral">
+                        {t.topic} · {t.count}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </CardBody>
+            </Card>
+
+            <Card>
+              <CardHeader title="Recent papers" subtitle="Latest additions with summaries." />
+              <CardBody>
+                {insights.recent_papers.length === 0 ? (
+                  <EmptyState title="No papers yet" description="Upload a PDF to get started." />
+                ) : (
+                  <ul className="ui-list">
+                    {insights.recent_papers.map((p) => (
+                      <li key={p.id} className="ui-list-row">
+                        <div style={{ fontWeight: 650 }}>{p.title}</div>
+                        <div className="ui-muted">
+                          {p.cluster_id !== null && p.cluster_id !== undefined
+                            ? `Cluster ${p.cluster_id} · `
+                            : ""}
+                          {new Date(p.created_at).toLocaleString()}
+                        </div>
+                        {p.summary ? (
+                          <div className="ui-muted" style={{ marginTop: "0.35rem" }}>
+                            {p.summary.length > 260 ? p.summary.slice(0, 260) + "…" : p.summary}
+                          </div>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </CardBody>
+            </Card>
+          </div>
+
+          <Card style={{ marginTop: "1rem" } as any}>
+            <CardHeader title="Clusters" subtitle="Grouped papers by semantic similarity." />
+            <CardBody>
+              {insights.clusters.length === 0 ? (
+                <EmptyState
+                  title="No clusters available"
+                  description="Clusters appear when clustering is enabled and enough papers exist."
+                />
+              ) : (
+                <div className="pm-cluster-grid">
+                  {insights.clusters.map((cluster) => (
+                    <Card key={cluster.cluster_id} className="pm-cluster-card">
+                      <CardHeader
+                        title={`Cluster ${cluster.cluster_id}`}
+                        subtitle={`${cluster.papers.length} papers`}
+                      />
+                      <CardBody>
+                        <ul className="ui-list">
+                          {cluster.papers.map((p) => (
+                            <li key={p.id} className="ui-list-row">
+                              <div style={{ fontWeight: 650 }}>{p.title}</div>
+                              {p.summary ? (
+                                <div className="ui-muted" style={{ marginTop: "0.25rem" }}>
+                                  {p.summary.length > 200 ? p.summary.slice(0, 200) + "…" : p.summary}
+                                </div>
+                              ) : null}
+                            </li>
+                          ))}
+                        </ul>
+                      </CardBody>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </CardBody>
+          </Card>
         </>
       )}
-    </div>
+    </ContentContainer>
   );
 }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 
 import {
   askQuestion,
@@ -11,10 +11,27 @@ import {
   listMessages,
   createConversation,
 } from "@/src/lib/api";
+import { ContentContainer, PageHeader } from "@/src/components/layout/Page";
+import { Button } from "@/src/components/ui/Button";
+import { Card, CardBody, CardHeader } from "@/src/components/ui/Card";
+import { EmptyState } from "@/src/components/ui/EmptyState";
+import { Input } from "@/src/components/ui/Input";
+
+function threadButtonClass(isActive: boolean) {
+  return isActive
+    ? "pm-chat-thread__btn pm-chat-thread__btn--active"
+    : "pm-chat-thread__btn";
+}
+
+function bubbleClass(role: ChatMessage["role"]) {
+  if (role === "user") return "pm-chat-bubble pm-chat-bubble--user";
+  return "pm-chat-bubble pm-chat-bubble--assistant";
+}
 
 export default function WorkspaceChatPage() {
   const params = useParams<{ id: string }>();
   const workspaceId = params.id;
+  const router = useRouter();
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
@@ -120,7 +137,7 @@ export default function WorkspaceChatPage() {
       ),
     );
     return (
-      <div style={{ marginTop: "0.35rem", fontSize: "0.75rem", color: "#6B7280" }}>
+      <div className="ui-muted" style={{ marginTop: "0.35rem" }}>
         Sources{" "}
         {labels.map((label, idx) => (
           <span key={label}>
@@ -132,117 +149,121 @@ export default function WorkspaceChatPage() {
     );
   }
 
+  let sidebarContent: React.ReactNode = null;
+  if (loadingConversations) {
+    sidebarContent = <div className="ui-muted">Loading…</div>;
+  } else if (conversations.length === 0) {
+    sidebarContent = (
+      <EmptyState
+        title="No conversations yet"
+        description="Create a conversation to start asking questions."
+        action={<Button onClick={handleNewConversation}>Create conversation</Button>}
+      />
+    );
+  } else {
+    sidebarContent = (
+      <ul className="ui-list">
+        {conversations.map((conv) => (
+          <li key={conv.id} className="pm-chat-thread">
+            <button
+              type="button"
+              className={threadButtonClass(selectedConversationId === conv.id)}
+              onClick={() => setSelectedConversationId(conv.id)}
+            >
+              {conv.title || "Untitled conversation"}
+            </button>
+          </li>
+        ))}
+      </ul>
+    );
+  }
+
+  let messageContent: React.ReactNode = null;
+  if (loadingMessages) {
+    messageContent = <div className="ui-muted">Loading messages…</div>;
+  } else if (messages.length === 0) {
+    messageContent = (
+      <EmptyState
+        title="Ask your first question"
+        description="Try: “What are the main contributions of the latest paper?”"
+      />
+    );
+  } else {
+    messageContent = (
+      <ul className="pm-chat-bubbles">
+        {messages.map((msg) => (
+          <li key={msg.id} className={bubbleClass(msg.role)}>
+            <div className="pm-chat-bubble__meta">
+              {msg.role === "user" ? "You" : "Assistant"}
+            </div>
+            <div className="pm-chat-bubble__content">{msg.content}</div>
+            {msg.role === "assistant" ? renderCitations(msg) : null}
+          </li>
+        ))}
+      </ul>
+    );
+  }
+
   return (
-    <div className="page-layout">
-      <header className="page-header">
-        <div>
-          <h1>Workspace chat</h1>
-          <p>Ask questions over the papers in this workspace.</p>
-        </div>
-        <nav>
-          <a href={`/workspace/${workspaceId}`}>Back to workspace</a>
-        </nav>
-      </header>
+    <ContentContainer>
+      <PageHeader
+        title="Chat"
+        subtitle="Ask questions over the papers in this workspace."
+        actions={
+          <>
+            <Button
+              variant="secondary"
+              onClick={() => router.push(`/workspace/${workspaceId}`)}
+            >
+              Back
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={handleNewConversation}
+              disabled={loadingConversations}
+            >
+              New conversation
+            </Button>
+          </>
+        }
+      />
 
-      {error && <p className="auth-error">{error}</p>}
+      {error ? <div className="ui-error" style={{ marginBottom: "0.75rem" }}>{error}</div> : null}
 
-      <section className="card chat-layout">
-        <aside className="chat-sidebar">
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.75rem" }}>
-            <h2 style={{ fontSize: "1rem" }}>Conversations</h2>
-            <button type="button" onClick={handleNewConversation} disabled={loadingConversations}>
-              New
-            </button>
-          </div>
-          {loadingConversations ? (
-            <p>Loading...</p>
-          ) : conversations.length === 0 ? (
-            <p style={{ fontSize: "0.9rem", color: "#6B7280" }}>No conversations yet.</p>
-          ) : (
-            <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-              {conversations.map((conv) => (
-                <li key={conv.id}>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedConversationId(conv.id)}
-                    style={{
-                      width: "100%",
-                      textAlign: "left",
-                      padding: "0.4rem 0.5rem",
-                      marginBottom: "0.25rem",
-                      borderRadius: "0.4rem",
-                      border: "none",
-                      background:
-                        selectedConversationId === conv.id ? "#E5E7EB" : "transparent",
-                      cursor: "pointer",
-                      fontSize: "0.9rem",
-                    }}
-                  >
-                    {conv.title || "Untitled conversation"}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </aside>
+      <div className="pm-chat-grid">
+        <Card className="pm-chat-sidebar">
+          <CardHeader title="Conversations" subtitle="Workspace threads" />
+          <CardBody>
+            {sidebarContent}
+          </CardBody>
+        </Card>
 
-        <div className="chat-main">
-          <div className="chat-messages">
-            {loadingMessages ? (
-              <p>Loading messages...</p>
-            ) : messages.length === 0 ? (
-              <p style={{ fontSize: "0.9rem", color: "#6B7280" }}>
-                Start by asking a question about the papers in this workspace.
-              </p>
-            ) : (
-              <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-                {messages.map((msg) => (
-                  <li
-                    key={msg.id}
-                    style={{
-                      marginBottom: "0.75rem",
-                      textAlign: msg.role === "user" ? "right" : "left",
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: "inline-block",
-                        padding: "0.5rem 0.75rem",
-                        borderRadius: "0.75rem",
-                        background:
-                          msg.role === "user" ? "#111827" : "#F3F4F6",
-                        color: msg.role === "user" ? "#FFFFFF" : "#111827",
-                        maxWidth: "80%",
-                        fontSize: "0.9rem",
-                      }}
-                    >
-                      <div style={{ marginBottom: "0.25rem", fontWeight: 500 }}>
-                        {msg.role === "user" ? "You" : "Assistant"}
-                      </div>
-                      <div>{msg.content}</div>
-                      {msg.role === "assistant" && renderCitations(msg)}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+        <Card className="pm-chat-main">
+          <CardHeader
+            title="Assistant"
+            subtitle="Grounded answers with citations when available."
+          />
+          <CardBody>
+            <div className="pm-chat-messages">
+              {messageContent}
+            </div>
 
-          <form onSubmit={handleSend} className="chat-input">
-            <input
-              type="text"
-              value={question}
-              onChange={(e) => setQuestion(e.target.value)}
-              placeholder="Ask about the papers in this workspace..."
-              disabled={sending}
-            />
-            <button type="submit" disabled={sending || !question.trim()}>
-              {sending ? "Thinking..." : "Send"}
-            </button>
-          </form>
-        </div>
-      </section>
-    </div>
+            <form onSubmit={handleSend} className="pm-chat-composer">
+              <Input
+                aria-label="Message"
+                value={question}
+                onChange={(e) => setQuestion(e.target.value)}
+                placeholder="Ask about the papers in this workspace…"
+                disabled={sending}
+              />
+              <Button type="submit" disabled={sending || !question.trim()}>
+                {sending ? "Thinking…" : "Send"}
+              </Button>
+            </form>
+          </CardBody>
+        </Card>
+      </div>
+    </ContentContainer>
   );
 }
 
